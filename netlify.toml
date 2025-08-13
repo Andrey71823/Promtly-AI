@@ -1,12 +1,12 @@
 [build]
-  command = "pnpm run build"
+  command = "npm run build"
   publish = "build/client"
   functions = "build/server"
 
 [build.environment]
-  NODE_VERSION = "18.18.0"
+  NODE_VERSION = "20.18.0"
   NPM_FLAGS = "--version"
-  PNPM_VERSION = "9.4.0"
+  NODE_OPTIONS = "--no-experimental-fetch"
 
 [[redirects]]
   from = "/*"
