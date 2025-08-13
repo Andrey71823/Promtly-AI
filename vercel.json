@@ -1,0 +1,18 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "build/client",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "remix",
+  "functions": {
+    "app/routes/api.*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
