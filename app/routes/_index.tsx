@@ -1,4 +1,4 @@
-import { json, type MetaFunction } from '@remix-run/cloudflare';
+import { type MetaFunction } from '@remix-run/cloudflare';
 import { ClientOnly } from 'remix-utils/client-only';
 import { BaseChat } from '~/components/chat/BaseChat';
 import { Chat } from '~/components/chat/Chat.client';
@@ -9,7 +9,7 @@ export const meta: MetaFunction = () => {
   return [{ title: 'Promtly AI - AI Coding Assistant' }, { name: 'description', content: 'Promtly AI - Your Advanced AI-Powered Full-Stack Development Assistant' }];
 };
 
-export const loader = () => json({});
+// SPA Mode: Loader removed for static build
 
 /**
  * Landing page component for Bolt
