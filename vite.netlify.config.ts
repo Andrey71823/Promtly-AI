@@ -31,6 +31,7 @@ export default defineConfig((config) => {
       }),
       remixVitePlugin({
         ssr: false,
+        ignoredRouteFiles: ['**/api.*', '**/webcontainer.*'],
         future: {
           v3_fetcherPersist: true,
           v3_relativeSplatPath: true,
