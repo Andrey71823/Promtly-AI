@@ -15,6 +15,7 @@
     "deploy:netlify": "npm run build",
     "build": "remix vite:build",
     "build:netlify": "vite build --config vite.netlify.config.ts",
+    "build:static": "vite build --config vite.static.config.ts",
     "dev": "node pre-start.cjs  && remix vite:dev",
     "test": "vitest --run",
     "test:watch": "vitest",
