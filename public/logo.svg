@@ -1,0 +1,44 @@
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Градиенты для граней куба -->
+    <linearGradient id="topGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFB6C1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#FF91A4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF69B4;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="leftGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#6BB6FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4169E1;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="rightGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#DDA0DD;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#C888DD;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9370DB;stop-opacity:1" />
+    </linearGradient>
+    <!-- Тень -->
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="2" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <!-- 3D куб с тенью -->
+  <!-- Верхняя грань -->
+  <polygon points="10,18 16,12 26,12 20,18" fill="url(#topGradient)" stroke="#333" stroke-width="1.5" filter="url(#shadow)"/>
+  
+  <!-- Левая грань -->
+  <polygon points="10,18 16,12 16,22 10,28" fill="url(#leftGradient)" stroke="#333" stroke-width="1.5"/>
+  
+  <!-- Правая грань -->
+  <polygon points="20,18 26,12 26,22 20,28" fill="url(#rightGradient)" stroke="#333" stroke-width="1.5"/>
+  
+  <!-- Нижние грани для 3D эффекта -->
+  <polygon points="10,28 16,22 26,22 20,28" fill="#666" stroke="#333" stroke-width="1"/>
+  
+  <!-- Символы </> -->
+  <text x="13" y="22" font-family="'Courier New', monospace" font-size="8" font-weight="bold" fill="#fff" stroke="#000" stroke-width="0.3">&lt;/&gt;</text>
+  
+  <!-- Блики для 3D эффекта -->
+  <polygon points="11,19 15,13 15,14 11,20" fill="#fff" opacity="0.3"/>
+  <polygon points="21,19 25,13 25,14 21,20" fill="#fff" opacity="0.2"/>
+</svg>

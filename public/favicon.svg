@@ -1,0 +1,28 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="topGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFB6C1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF69B4;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="leftGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4169E1;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="rightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#DDA0DD;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9370DB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 3D куб для favicon -->
+  <polygon points="8,14 12,10 20,10 16,14" fill="url(#topGrad)" stroke="#333" stroke-width="1"/>
+  <polygon points="8,14 12,10 12,18 8,22" fill="url(#leftGrad)" stroke="#333" stroke-width="1"/>
+  <polygon points="16,14 20,10 20,18 16,22" fill="url(#rightGrad)" stroke="#333" stroke-width="1"/>
+  <polygon points="8,22 12,18 20,18 16,22" fill="#666" stroke="#333" stroke-width="0.5"/>
+  
+  <!-- Символы </> -->
+  <text x="9.5" y="18" font-family="monospace" font-size="5" font-weight="bold" fill="#fff" stroke="#000" stroke-width="0.3">&lt;/&gt;</text>
+  
+  <!-- Блики -->
+  <polygon points="9,15 11,11 11,12 9,16" fill="#fff" opacity="0.4"/>
+</svg>
