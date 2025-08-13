@@ -31,7 +31,13 @@ export default defineConfig((config) => {
       }),
       remixVitePlugin({
         ssr: false,
-        ignoredRouteFiles: ['**/api.*', '**/webcontainer.*'],
+        ignoredRouteFiles: ['**/api.*', '**/webcontainer.*', '**/chat.$id.tsx'],
+        routes(defineRoutes) {
+          return defineRoutes((route) => {
+            route('/', 'routes/_index.tsx', { index: true });
+            route('/git', 'routes/git.tsx');
+          });
+        },
         future: {
           v3_fetcherPersist: true,
           v3_relativeSplatPath: true,
