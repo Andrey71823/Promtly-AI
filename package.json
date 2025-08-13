@@ -14,6 +14,7 @@
     "deploy": "npm run build && wrangler pages deploy",
     "deploy:netlify": "npm run build",
     "build": "remix vite:build",
+    "build:netlify": "vite build --config vite.netlify.config.ts",
     "dev": "node pre-start.cjs  && remix vite:dev",
     "test": "vitest --run",
     "test:watch": "vitest",
