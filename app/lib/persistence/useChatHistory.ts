@@ -41,8 +41,13 @@ export const description = atom<string | undefined>(undefined);
 export const chatMetadata = atom<IChatMetadata | undefined>(undefined);
 export function useChatHistory() {
   const navigate = useNavigate();
-  const { id: mixedId } = useLoaderData<{ id?: string }>();
+  const loaderData = useLoaderData<{ id?: string }>();
+  const { id: mixedId } = loaderData || {};
   const [searchParams] = useSearchParams();
+  
+  // Extract ID from URL if loader data is not available (SPA mode)
+  const urlMixedId = typeof window !== 'undefined' ? window.location.pathname.split('/').pop() : undefined;
+  const finalMixedId = mixedId || (urlMixedId !== '' && urlMixedId !== 'chat' ? urlMixedId : undefined);
 
   const [archivedMessages, setArchivedMessages] = useState<Message[]>([]);
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
@@ -62,15 +67,15 @@ export function useChatHistory() {
       return;
     }
 
-    if (mixedId) {
+    if (finalMixedId && finalMixedId.trim() !== '') {
       Promise.all([
-        getMessages(db, mixedId),
-        getSnapshot(db, mixedId), // Fetch snapshot from DB
+        getMessages(db, finalMixedId),
+        getSnapshot(db, finalMixedId), // Fetch snapshot from DB
       ])
         .then(async ([storedMessages, snapshot]) => {
           if (storedMessages && storedMessages.messages.length > 0) {
             /*
-             * const snapshotStr = localStorage.getItem(`snapshot:${mixedId}`); // Remove localStorage usage
+             * const snapshotStr = localStorage.getItem(`snapshot:${finalMixedId}`); // Remove localStorage usage
              * const snapshot: Snapshot = snapshotStr ? JSON.parse(snapshotStr) : { chatIndex: 0, files: {} }; // Use snapshot from DB
              */
             const validSnapshot = snapshot || { chatIndex: '', files: {} }; // Ensure snapshot is not undefined
@@ -130,7 +135,7 @@ export function useChatHistory() {
                   role: 'assistant',
 
                   // Combine followup message and the artifact with files and command actions
-                  content: `Bolt Restored your chat from a snapshot. You can revert this message to load the full chat history.
+                  content: `Promtly AI restored your chat from a snapshot. You can revert this message to load the full chat history.
                   <boltArtifact id="restored-project-setup" title="Restored Project & Setup" type="bundled">
                   ${Object.entries(snapshot?.files || {})
                     .map(([key, value]) => {
@@ -170,7 +175,7 @@ ${value.content}
                  */
                 ...filteredMessages,
               ];
-              restoreSnapshot(mixedId);
+              restoreSnapshot(finalMixedId);
             }
 
             setInitialMessages(filteredMessages);
@@ -188,14 +193,18 @@ ${value.content}
         .catch((error) => {
           console.error(error);
 
-          logStore.logError('Failed to load chat messages or snapshot', error); // Updated error message
-          toast.error('Failed to load chat: ' + error.message); // More specific error
+          logStore.logError('Failed to load chat messages or snapshot', error);
+          
+          // Показываем ошибку только если это не проблема с пустым ID
+          if (error.message !== 'Chat ID is required') {
+            toast.error('Failed to load chat: ' + error.message);
+          }
         });
     } else {
       // Handle case where there is no mixedId (e.g., new chat)
       setReady(true);
     }
-  }, [mixedId, db, navigate, searchParams]); // Added db, navigate, searchParams dependencies
+  }, [finalMixedId, db, navigate, searchParams]); // Added db, navigate, searchParams dependencies
 
   const takeSnapshot = useCallback(
     async (chatIdx: string, files: FileMap, _chatId?: string | undefined, chatSummary?: string) => {
@@ -256,7 +265,7 @@ ${value.content}
   }, []);
 
   return {
-    ready: !mixedId || ready,
+    ready: !finalMixedId || ready,
     initialMessages,
     updateChatMestaData: async (metadata: IChatMetadata) => {
       const id = chatId.get();
@@ -343,12 +352,12 @@ ${value.content}
       );
     },
     duplicateCurrentChat: async (listItemId: string) => {
-      if (!db || (!mixedId && !listItemId)) {
+      if (!db || (!finalMixedId && !listItemId)) {
         return;
       }
 
       try {
-        const newId = await duplicateChat(db, mixedId || listItemId);
+        const newId = await duplicateChat(db, finalMixedId || listItemId);
         navigate(`/chat/${newId}`);
         toast.success('Chat duplicated successfully');
       } catch (error) {

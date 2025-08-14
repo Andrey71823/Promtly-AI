@@ -71,3 +71,53 @@ body {
   // Firefox support for inverted colors
   scrollbar-color: color-mix(in srgb, var(--bolt-elements-textPrimary), transparent 50%) transparent;
 }
+
+/* Мобильные исправления для WebContainer и Preview */
+@media (max-width: 768px) {
+  /* Исправления для iframe на мобильных устройствах */
+  iframe {
+    color-scheme: light !important;
+    background-color: white !important;
+    min-height: 400px;
+    touch-action: manipulation;
+  }
+  
+  /* Улучшенная производительность на мобильных */
+  .workbench {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  
+  /* Исправления для touch-событий */
+  .preview-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+  }
+}
+
+/* Исправления для Safari iOS */
+@supports (-webkit-touch-callout: none) {
+  iframe {
+    color-scheme: light !important;
+    background-color: white !important;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}
+
+/* Принудительная светлая тема для всех iframe */
+iframe[src*="webcontainer"],
+iframe[src*="preview"],
+iframe[title="preview"] {
+  color-scheme: light !important;
+  background-color: white !important;
+  background: white !important;
+}
+
+/* Темная тема - принудительно светлые iframe */
+[data-theme="dark"] iframe,
+.dark iframe {
+  color-scheme: light !important;
+  background-color: white !important;
+  background: white !important;
+}

@@ -49,3 +49,5 @@ docs/instructions/Roadmap.md
 
 # Local Netlify folder
 .netlify
+
+.vercel

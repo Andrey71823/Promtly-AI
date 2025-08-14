@@ -18,8 +18,10 @@ export async function openDatabase(): Promise<IDBDatabase | undefined> {
     return undefined;
   }
 
-  return new Promise((resolve) => {
-    const request = indexedDB.open('boltHistory', 2);
+  // Add mobile-specific IndexedDB fixes
+  try {
+    return new Promise((resolve) => {
+      const request = indexedDB.open('boltHistory', 2);
 
     request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
       const db = (event.target as IDBOpenDBRequest).result;
@@ -48,7 +50,17 @@ export async function openDatabase(): Promise<IDBDatabase | undefined> {
       resolve(undefined);
       logger.error((event.target as IDBOpenDBRequest).error);
     };
-  });
+
+    // Handle database connection closing on mobile
+    request.onblocked = () => {
+      console.warn('IndexedDB blocked - trying to resolve gracefully');
+      resolve(undefined);
+    };
+    });
+  } catch (error) {
+    console.error('IndexedDB initialization failed:', error);
+    return undefined;
+  }
 }
 
 export async function getAll(db: IDBDatabase): Promise<ChatHistoryItem[]> {
@@ -95,11 +107,19 @@ export async function setMessages(
 }
 
 export async function getMessages(db: IDBDatabase, id: string): Promise<ChatHistoryItem> {
+  if (!id || id.trim() === '') {
+    throw new Error('Chat ID is required');
+  }
   return (await getMessagesById(db, id)) || (await getMessagesByUrlId(db, id));
 }
 
 export async function getMessagesByUrlId(db: IDBDatabase, id: string): Promise<ChatHistoryItem> {
   return new Promise((resolve, reject) => {
+    if (!id || id.trim() === '') {
+      resolve(undefined as any);
+      return;
+    }
+    
     const transaction = db.transaction('chats', 'readonly');
     const store = transaction.objectStore('chats');
     const index = store.index('urlId');
@@ -112,6 +132,11 @@ export async function getMessagesByUrlId(db: IDBDatabase, id: string): Promise<C
 
 export async function getMessagesById(db: IDBDatabase, id: string): Promise<ChatHistoryItem> {
   return new Promise((resolve, reject) => {
+    if (!id || id.trim() === '') {
+      resolve(undefined as any);
+      return;
+    }
+    
     const transaction = db.transaction('chats', 'readonly');
     const store = transaction.objectStore('chats');
     const request = store.get(id);

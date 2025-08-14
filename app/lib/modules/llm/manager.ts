@@ -198,6 +198,13 @@ export class LLMManager {
   }
 
   getDefaultProvider(): BaseProvider {
+    // Принудительно используем Anthropic как провайдер по умолчанию
+    const anthropicProvider = this._providers.get('Anthropic');
+    if (anthropicProvider) {
+      return anthropicProvider;
+    }
+
+    // Если Anthropic недоступен, берем первый доступный
     const firstProvider = this._providers.values().next().value;
 
     if (!firstProvider) {
