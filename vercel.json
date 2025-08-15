@@ -1,0 +1,7 @@
+{
+  "buildCommand": "npm run build:vercel",
+  "framework": "remix",
+  "env": {
+    "VITE_LOG_LEVEL": "debug"
+  }
+}

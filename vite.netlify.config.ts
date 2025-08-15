@@ -30,7 +30,6 @@ export default defineConfig((config) => {
         exclude: ['child_process', 'fs', 'path'],
       }),
       remixVitePlugin({
-        ssr: false,
         ignoredRouteFiles: ['**/api.*', '**/webcontainer.*'],
         future: {
           v3_fetcherPersist: true,

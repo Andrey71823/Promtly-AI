@@ -1,6 +1,6 @@
 [build]
-  command = "npm install --force && npm run build:static"
-  publish = "dist"
+  publish = "build/client"
+  command = "npm run build:netlify"
 
 [build.environment]
   NODE_VERSION = "20.18.1"

@@ -117,7 +117,8 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                 apiKeys={props.apiKeys}
                 modelLoading={props.isModelLoading}
               />
-              {(props.providerList || []).length > 0 &&
+              {/* API Key Manager скрыт для пользователей - используются внутренние ключи */}
+              {false && (props.providerList || []).length > 0 &&
                 props.provider &&
                 (!LOCAL_PROVIDERS.includes(props.provider.name) || 'OpenAILike') && (
                   <APIKeyManager
@@ -304,7 +305,8 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                 {props.chatMode === 'discuss' ? <span>Discuss</span> : <span />}
               </IconButton>
             )}
-            <IconButton
+            {/* Кнопка настроек модели скрыта для пользователей */}
+            {false && <IconButton
               title="Model Settings"
               className={classNames('transition-all flex items-center gap-1', {
                 'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent':
@@ -317,7 +319,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
             >
               <div className={`i-ph:caret-${props.isModelSettingsCollapsed ? 'right' : 'down'} text-lg`} />
               {props.isModelSettingsCollapsed ? <span className="text-xs">{props.model}</span> : <span />}
-            </IconButton>
+            </IconButton>}
           </div>
           {props.input.length > 3 ? (
             <div className="text-xs text-bolt-elements-textTertiary">

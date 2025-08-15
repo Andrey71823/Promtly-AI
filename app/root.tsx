@@ -61,6 +61,32 @@ export const Head = createHead(() => (
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <Meta />
     <Links />
+    <style dangerouslySetInnerHTML={{
+      __html: `
+        /* Принудительная светлая тема для WebContainer iframe */
+        iframe[src*="webcontainer"] {
+          color-scheme: light !important;
+          background-color: white !important;
+        }
+        
+        /* Исправление для темной темы системы */
+        @media (prefers-color-scheme: dark) {
+          iframe {
+            color-scheme: light !important;
+            background: white !important;
+          }
+        }
+        
+        /* Мобильные исправления */
+        @media (max-width: 768px) {
+          iframe {
+            color-scheme: light !important;
+            background-color: white !important;
+            min-height: 400px;
+          }
+        }
+      `
+    }} />
     <script dangerouslySetInnerHTML={{ __html: inlineThemeCode }} />
   </>
 ));

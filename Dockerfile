@@ -4,12 +4,10 @@ FROM ${BASE} AS base
 WORKDIR /app
 
 # Install dependencies (this step is cached as long as the dependencies don't change)
-COPY package.json pnpm-lock.yaml ./
+COPY package.json ./
 
-#RUN npm install -g corepack@latest
-
-#RUN corepack enable pnpm && pnpm install
-RUN npm install -g pnpm && pnpm install
+# Use npm instead of pnpm for Railway compatibility
+RUN npm install --legacy-peer-deps
 
 # Copy the rest of your app's source code
 COPY . .
@@ -55,9 +53,9 @@ ENV WRANGLER_SEND_METRICS=false \
 RUN mkdir -p /root/.config/.wrangler && \
     echo '{"enabled":false}' > /root/.config/.wrangler/metrics.json
 
-RUN pnpm run build
+RUN npm run build
 
-CMD [ "pnpm", "run", "dockerstart"]
+CMD [ "npm", "run", "dockerstart"]
 
 # Development image
 FROM base AS bolt-ai-development
@@ -92,4 +90,4 @@ ENV GROQ_API_KEY=${GROQ_API_KEY} \
     RUNNING_IN_DOCKER=true
 
 RUN mkdir -p ${WORKDIR}/run
-CMD pnpm run dev --host
+CMD npm run dev --host
