@@ -1,0 +1,39 @@
+name: Deploy to Digital Ocean
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.DIGITALOCEAN_SSH_KEY }}
+        
+    - name: Deploy to Digital Ocean
+      env:
+        DROPLET_IP: ${{ secrets.DROPLET_IP }}
+        DROPLET_USER: ${{ secrets.DROPLET_USER }}
+        DOMAIN: ${{ secrets.DOMAIN }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        OPEN_ROUTER_API_KEY: ${{ secrets.OPEN_ROUTER_API_KEY }}
+        GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+        OLLAMA_API_BASE_URL: ${{ secrets.OLLAMA_API_BASE_URL }}
+        XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+        TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+        TOGETHER_API_BASE_URL: ${{ secrets.TOGETHER_API_BASE_URL }}
+        AWS_BEDROCK_CONFIG: ${{ secrets.AWS_BEDROCK_CONFIG }}
+        DEFAULT_NUM_CTX: ${{ secrets.DEFAULT_NUM_CTX }}
+      run: |
+        chmod +x ./deploy-digitalocean.sh
+        ./deploy-digitalocean.sh
