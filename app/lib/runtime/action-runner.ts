@@ -6,6 +6,7 @@ import { createScopedLogger } from '~/utils/logger';
 import { unreachable } from '~/utils/unreachable';
 import type { ActionCallbackData } from './message-parser';
 import type { BoltShell } from '~/utils/shell';
+import { previewLoadingManager } from '~/lib/stores/previewLoading';
 
 const logger = createScopedLogger('ActionRunner');
 
@@ -265,7 +266,14 @@ export class ActionRunner {
     });
     logger.debug(`${action.type} Shell Response: [exit code:${resp?.exitCode}]`);
 
+    // Monitor terminal output for loading states
+    if (resp?.output) {
+      previewLoadingManager.monitorTerminalOutput(resp.output);
+    }
+
     if (resp?.exitCode != 0) {
+      // Set error state for failed commands
+      previewLoadingManager.setErrorState(`Command failed: ${action.content}`);
       throw new ActionCommandError(`Failed To Execute Shell Command`, resp?.output || 'No Output Available');
     }
   }
@@ -292,7 +300,14 @@ export class ActionRunner {
     });
     logger.debug(`${action.type} Shell Response: [exit code:${resp?.exitCode}]`);
 
+    // Monitor terminal output for loading states
+    if (resp?.output) {
+      previewLoadingManager.monitorTerminalOutput(resp.output);
+    }
+
     if (resp?.exitCode != 0) {
+      // Set error state for failed start commands
+      previewLoadingManager.setErrorState('Failed to start application. Check terminal for details.');
       throw new ActionCommandError('Failed To Start Application', resp?.output || 'No Output Available');
     }
 

@@ -1,5 +1,6 @@
 import type { WebContainer } from '@webcontainer/api';
 import { atom } from 'nanostores';
+import { previewLoadingManager } from './previewLoading';
 
 // Extend Window interface to include our custom property
 declare global {
@@ -147,6 +148,9 @@ export class PreviewsStore {
       console.log('[Preview] Server ready on port:', port, url);
       this.broadcastUpdate(url);
 
+      // Monitor WebContainer event for loading manager
+      previewLoadingManager.monitorWebContainerEvents('server-ready', { port, url });
+
       // Initial storage sync when preview is ready
       this._broadcastStorageSync();
     });
@@ -154,6 +158,13 @@ export class PreviewsStore {
     // Listen for port events
     webcontainer.on('port', (port, type, url) => {
       let previewInfo = this.#availablePreviews.get(port);
+
+      // Monitor WebContainer port events for loading manager
+      if (type === 'open') {
+        previewLoadingManager.monitorWebContainerEvents('port-open', { port, url });
+      } else if (type === 'close') {
+        previewLoadingManager.monitorWebContainerEvents('port-close', { port, url });
+      }
 
       if (type === 'close' && previewInfo) {
         this.#availablePreviews.delete(port);

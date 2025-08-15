@@ -7,6 +7,8 @@ import { ScreenshotSelector } from './ScreenshotSelector';
 import { expoUrlAtom } from '~/lib/stores/qrCodeStore';
 import { ExpoQrModal } from '~/components/workbench/ExpoQrModal';
 import type { ElementInfo } from './Inspector';
+import { PreviewLoadingOverlay } from './PreviewLoadingOverlay';
+import { previewLoadingState, previewLoadingManager } from '~/lib/stores/previewLoading';
 
 type ResizeSide = 'left' | 'right' | null;
 
@@ -89,6 +91,9 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
   const [showDeviceFrameInPreview, setShowDeviceFrameInPreview] = useState(false);
   const expoUrl = useStore(expoUrlAtom);
   const [isExpoQrModalOpen, setIsExpoQrModalOpen] = useState(false);
+  
+  // Loading overlay state
+  const loadingInfo = useStore(previewLoadingState);
 
   useEffect(() => {
     if (!activePreview) {
@@ -102,6 +107,17 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
     setIframeUrl(baseUrl);
     setDisplayPath('/');
   }, [activePreview]);
+
+  // Monitor iframe URL changes and set loading state
+  useEffect(() => {
+    if (iframeUrl && activePreview) {
+      // Set loading state when iframe URL changes
+      previewLoadingManager.setLoadingState('starting');
+    } else if (!activePreview) {
+      // Reset loading state when no preview is available
+      previewLoadingManager.reset();
+    }
+  }, [iframeUrl, activePreview]);
 
   const findMinPortIndex = useCallback(
     (minIndex: number, preview: { port: number }, index: number, array: { port: number }[]) => {
@@ -119,6 +135,8 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
 
   const reloadPreview = () => {
     if (iframeRef.current) {
+      // Reset loading state and set to starting when manually reloading
+      previewLoadingManager.setLoadingState('starting');
       iframeRef.current.src = iframeRef.current.src;
     }
   };
@@ -991,6 +1009,8 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
                       src={iframeUrl}
                       sandbox="allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation allow-same-origin"
                       allow="cross-origin-isolated"
+                      onLoad={() => previewLoadingManager.monitorIframeEvents('load', iframeRef.current || undefined)}
+                      onError={() => previewLoadingManager.monitorIframeEvents('error', iframeRef.current || undefined)}
                     />
                   </div>
                 </div>
@@ -1002,6 +1022,8 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
                   src={iframeUrl}
                   sandbox="allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation allow-same-origin"
                   allow="geolocation; ch-ua-full-version-list; cross-origin-isolated; screen-wake-lock; publickey-credentials-get; shared-storage-select-url; ch-ua-arch; bluetooth; compute-pressure; ch-prefers-reduced-transparency; deferred-fetch; usb; ch-save-data; publickey-credentials-create; shared-storage; deferred-fetch-minimal; run-ad-auction; ch-ua-form-factors; ch-downlink; otp-credentials; payment; ch-ua; ch-ua-model; ch-ect; autoplay; camera; private-state-token-issuance; accelerometer; ch-ua-platform-version; idle-detection; private-aggregation; interest-cohort; ch-viewport-height; local-fonts; ch-ua-platform; midi; ch-ua-full-version; xr-spatial-tracking; clipboard-read; gamepad; display-capture; keyboard-map; join-ad-interest-group; ch-width; ch-prefers-reduced-motion; browsing-topics; encrypted-media; gyroscope; serial; ch-rtt; ch-ua-mobile; window-management; unload; ch-dpr; ch-prefers-color-scheme; ch-ua-wow64; attribution-reporting; fullscreen; identity-credentials-get; private-state-token-redemption; hid; ch-ua-bitness; storage-access; sync-xhr; ch-device-memory; ch-viewport-width; picture-in-picture; magnetometer; clipboard-write; microphone"
+                  onLoad={() => previewLoadingManager.monitorIframeEvents('load', iframeRef.current || undefined)}
+                  onError={() => previewLoadingManager.monitorIframeEvents('error', iframeRef.current || undefined)}
                 />
               )}
               <ScreenshotSelector
@@ -1042,6 +1064,13 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
               <ResizeHandle side="right" />
             </>
           )}
+
+          {/* Loading overlay */}
+          <PreviewLoadingOverlay
+            isVisible={loadingInfo.state !== 'idle' && loadingInfo.state !== 'ready'}
+            message={loadingInfo.message || ''}
+            type={loadingInfo.state === 'error' ? 'error' : loadingInfo.state}
+          />
         </div>
       </div>
     </div>
