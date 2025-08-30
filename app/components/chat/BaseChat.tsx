@@ -349,12 +349,65 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         <div className="flex flex-col lg:flex-row overflow-y-auto w-full h-full">
           <div className={classNames(styles.Chat, 'flex flex-col flex-grow lg:min-w-[var(--chat-min-width)] h-full')}>
             {!chatStarted && (
-              <div id="intro" className="mt-[16vh] max-w-2xl mx-auto text-center px-4 lg:px-0">
-                <h1 className="text-3xl lg:text-6xl font-bold text-bolt-elements-textPrimary mb-4 animate-fade-in">
-                  Where ideas begin
+              <div id="intro" className="mt-[8vh] max-w-4xl mx-auto text-center px-4 lg:px-0">
+                <h1 className="text-2xl lg:text-4xl font-bold text-bolt-elements-textPrimary mb-6 animate-fade-in">
+                  ⚡ Promtly AI
                 </h1>
-                <p className="text-md lg:text-xl mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
-                  Bring ideas to life in seconds or get help on existing projects.
+                <p className="text-base lg:text-xl mb-6 text-bolt-elements-textSecondary animate-fade-in animation-delay-200">
+                  Build applications in your browser in seconds
+                </p>
+
+                {/* Features showcase */}
+                <div className="grid grid-cols-4 lg:grid-cols-4 gap-3 mb-6 animate-fade-in animation-delay-400">
+                  <div className="flex flex-col items-center p-2 rounded-lg bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor">
+                    <div className="text-2xl mb-1">🖥️</div>
+                    <h3 className="text-xs font-semibold text-bolt-elements-textPrimary mb-1">Web Apps</h3>
+                    <p className="text-xs text-bolt-elements-textSecondary">SPA & PWA</p>
+                  </div>
+
+                  <div className="flex flex-col items-center p-2 rounded-lg bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor">
+                    <div className="text-2xl mb-1">📱</div>
+                    <h3 className="text-xs font-semibold text-bolt-elements-textPrimary mb-1">Mobile Apps</h3>
+                    <p className="text-xs text-bolt-elements-textSecondary">Expo & React Native</p>
+                  </div>
+
+                  <div className="flex flex-col items-center p-2 rounded-lg bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor">
+                    <div className="text-2xl mb-1">📊</div>
+                    <h3 className="text-xs font-semibold text-bolt-elements-textPrimary mb-1">Dashboards</h3>
+                    <p className="text-xs text-bolt-elements-textSecondary">Admin Panels</p>
+                  </div>
+
+                  <div className="flex flex-col items-center p-2 rounded-lg bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor">
+                    <div className="text-2xl mb-1">🛍️</div>
+                    <h3 className="text-xs font-semibold text-bolt-elements-textPrimary mb-1">Landing Pages</h3>
+                    <p className="text-xs text-bolt-elements-textSecondary">Marketing Sites</p>
+                  </div>
+                </div>
+
+                {/* Tech stack */}
+                <div className="flex flex-wrap justify-center gap-1 mb-4 animate-fade-in animation-delay-600">
+                  <span className="px-2 py-0.5 text-xs bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-full text-bolt-elements-textSecondary">
+                    ⚛️ React
+                  </span>
+                  <span className="px-2 py-0.5 text-xs bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-full text-bolt-elements-textSecondary">
+                    ⚡ Vite
+                  </span>
+                  <span className="px-2 py-0.5 text-xs bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-full text-bolt-elements-textSecondary">
+                    🎨 Tailwind
+                  </span>
+                  <span className="px-2 py-0.5 text-xs bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-full text-bolt-elements-textSecondary">
+                    📱 Expo
+                  </span>
+                  <span className="px-2 py-0.5 text-xs bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-full text-bolt-elements-textSecondary">
+                    🟢 Node.js
+                  </span>
+                  <span className="px-2 py-0.5 text-xs bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-full text-bolt-elements-textSecondary">
+                    🗃️ API
+                  </span>
+                </div>
+
+                <p className="text-xs lg:text-sm text-bolt-elements-textSecondary animate-fade-in animation-delay-800">
+                  Describe your idea → Get a working app in minutes
                 </p>
               </div>
             )}

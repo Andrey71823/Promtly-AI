@@ -73,6 +73,12 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
     checkEnvApiKey();
   }, [checkEnvApiKey]);
 
+  // In production, if an API key is already provided via environment (or saved in cookies),
+  // hide the entire API key editor to avoid confusing end users.
+  if ((isEnvKeySet || !!apiKey) && import.meta.env.PROD && !isEditing) {
+    return null;
+  }
+
   const handleSave = () => {
     // Save to parent state
     setApiKey(tempKey);

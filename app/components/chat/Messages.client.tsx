@@ -29,6 +29,15 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
     const { id, isStreaming = false, messages = [] } = props;
     const location = useLocation();
 
+    // Protection against empty or invalid messages
+    const validMessages = messages?.filter(msg => {
+      if (!msg || typeof msg !== 'object') return false;
+      // Check for required fields
+      if (!msg.content && !msg.parts) return false;
+      if (msg.role !== 'user' && msg.role !== 'assistant') return false;
+      return true;
+    }) || [];
+
     const handleRewind = (messageId: string) => {
       const searchParams = new URLSearchParams(location.search);
       searchParams.set('rewindTo', messageId);
@@ -49,10 +58,23 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
       }
     };
 
+    // Optimization 1: Limit the number of displayed messages
+    const MAX_VISIBLE_MESSAGES = 50;
+    const visibleMessages = validMessages.length > MAX_VISIBLE_MESSAGES
+      ? validMessages.slice(-MAX_VISIBLE_MESSAGES)
+      : validMessages;
+
+    const hiddenMessagesCount = validMessages.length - visibleMessages.length;
+
     return (
       <div id={id} className={props.className} ref={ref}>
-        {messages.length > 0
-          ? messages.map((message, index) => {
+        {hiddenMessagesCount > 0 && (
+          <div className="text-center py-2 text-sm text-bolt-elements-textSecondary">
+            💬 {hiddenMessagesCount} previous messages hidden for performance
+          </div>
+        )}
+        {visibleMessages.length > 0
+          ? visibleMessages.map((message, index) => {
               const { role, content, id: messageId, annotations, parts } = message;
               const isUserMessage = role === 'user';
               const isFirst = index === 0;
@@ -64,7 +86,7 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
 
               return (
                 <div
-                  key={index}
+                  key={messageId || index}
                   className={classNames('flex gap-4 py-3 w-full rounded-lg', {
                     'mt-4': !isFirst,
                   })}

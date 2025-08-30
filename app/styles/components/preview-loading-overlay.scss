@@ -1,0 +1,87 @@
+/* Preview Loading Overlay Styles */
+.preview-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bolt-elements-background-depth-1);
+  backdrop-filter: blur(2px);
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.preview-loading-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.preview-loading-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border: 3px solid transparent;
+  border-top: 3px solid var(--bolt-elements-textPrimary);
+  border-right: 3px solid var(--bolt-elements-textPrimary);
+}
+
+/* Progress bar animation */
+@keyframes progress-pulse {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.progress-bar {
+  animation: progress-pulse 2s ease-in-out infinite;
+}
+
+/* Fade in animation for overlay */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.preview-loading-content {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .preview-loading-overlay {
+    padding: 1rem;
+  }
+  
+  .preview-loading-content {
+    max-width: 90%;
+  }
+}

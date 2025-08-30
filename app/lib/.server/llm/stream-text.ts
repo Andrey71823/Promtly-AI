@@ -116,7 +116,15 @@ export async function streamText(props: {
     }
   }
 
-  const dynamicMaxTokens = modelDetails && modelDetails.maxTokenAllowed ? modelDetails.maxTokenAllowed : MAX_TOKENS;
+  // Cap max tokens by model capability to avoid provider errors
+  const dynamicMaxTokens = (() => {
+    const base = modelDetails && modelDetails.maxTokenAllowed ? modelDetails.maxTokenAllowed : MAX_TOKENS;
+    const name = modelDetails?.name || '';
+    // Anthropic caps: haiku <= 8192, most <= 8000, sonnet 3.7 allows 128k
+    if (/haiku/i.test(name)) return Math.min(base, 8192);
+    if (/claude-3-7-sonnet/i.test(name)) return Math.min(base, 128000);
+    return Math.min(base, 8000);
+  })();
   logger.info(
     `Max tokens for model ${modelDetails.name} is ${dynamicMaxTokens} based on ${modelDetails.maxTokenAllowed} or ${MAX_TOKENS}`,
   );

@@ -101,7 +101,14 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         throw new Error('Model not found');
       }
 
-      const dynamicMaxTokens = modelDetails && modelDetails.maxTokenAllowed ? modelDetails.maxTokenAllowed : MAX_TOKENS;
+      // Cap max tokens by model capability to avoid provider errors
+      const dynamicMaxTokens = (() => {
+        const base = modelDetails && modelDetails.maxTokenAllowed ? modelDetails.maxTokenAllowed : MAX_TOKENS;
+        const name = modelDetails?.name || '';
+        if (/haiku/i.test(name)) return Math.min(base, 8192);
+        if (/claude-3-7-sonnet/i.test(name)) return Math.min(base, 128000);
+        return Math.min(base, 8000);
+      })();
 
       const providerInfo = PROVIDER_LIST.find((p) => p.name === provider.name);
 

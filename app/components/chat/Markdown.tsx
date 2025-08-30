@@ -37,6 +37,7 @@ export const Markdown = memo(
 
             if (!messageId) {
               logger.error(`Invalid message id ${messageId}`);
+              return <div>⚠️ Error: Invalid artifact message ID</div>;
             }
 
             return <Artifact messageId={messageId} />;
@@ -54,25 +55,31 @@ export const Markdown = memo(
                 elementData = JSON.parse(elementDataAttr);
               } catch (e) {
                 console.error('Failed to parse element data:', e);
+                return <div>⚠️ Error: Failed to parse element data</div>;
               }
             }
 
             if (!messageId) {
               logger.error(`Invalid message id ${messageId}`);
+              return <div>⚠️ Error: Invalid selected element message ID</div>;
+            }
+
+            if (!elementData) {
+              return <div>⚠️ Error: No element data available</div>;
             }
 
             return (
               <div className="bg-bolt-elements-background-depth-3 border border-bolt-elements-borderColor rounded-lg p-3 my-2">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-mono bg-bolt-elements-background-depth-2 px-2 py-1 rounded text-bolt-elements-textTer">
-                    {elementData?.tagName}
+                    {elementData?.tagName || 'Unknown'}
                   </span>
                   {elementData?.className && (
                     <span className="text-xs text-bolt-elements-textSecondary">.{elementData.className}</span>
                   )}
                 </div>
                 <code className="block text-sm !text-bolt-elements-textSecondary !bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor p-2 rounded">
-                  {elementData?.displayText}
+                  {elementData?.displayText || 'No content'}
                 </code>
               </div>
             );

@@ -433,11 +433,17 @@ export const ChatImpl = memo(
 
       let finalMessageContent = messageContent;
 
-      if (selectedElement) {
+      if (selectedElement && selectedElement.displayText) {
         console.log('Selected Element:', selectedElement);
 
-        const elementInfo = `<div class=\"__boltSelectedElement__\" data-element='${JSON.stringify(selectedElement)}'>${JSON.stringify(`${selectedElement.displayText}`)}</div>`;
-        finalMessageContent = messageContent + elementInfo;
+        try {
+          const elementInfo = `<div class=\"__boltSelectedElement__\" data-element='${JSON.stringify(selectedElement)}'>${JSON.stringify(`${selectedElement.displayText}`)}</div>`;
+          finalMessageContent = messageContent + elementInfo;
+        } catch (error) {
+          console.error('Error processing selected element:', error);
+          // Continue without element info if there's an error
+          finalMessageContent = messageContent;
+        }
       }
 
       runAnimation();

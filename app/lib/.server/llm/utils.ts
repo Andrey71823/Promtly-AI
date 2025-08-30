@@ -62,8 +62,13 @@ export function createFilesContext(files: FileMap, useRelativePath?: boolean) {
     return !ig.ignores(relPath);
   });
 
+  // Оптимизация 1: Ограничение количества файлов в контексте
+  const MAX_FILES_IN_CONTEXT = 10;
+  const MAX_CONTENT_SIZE_PER_FILE = 50 * 1024; // 50KB на файл
+
   const fileContexts = filePaths
     .filter((x) => files[x] && files[x].type == 'file')
+    .slice(0, MAX_FILES_IN_CONTEXT) // Берем только первые N файлов
     .map((path) => {
       const dirent = files[path];
 
@@ -71,7 +76,25 @@ export function createFilesContext(files: FileMap, useRelativePath?: boolean) {
         return '';
       }
 
-      const codeWithLinesNumbers = dirent.content
+      // Оптимизация 2: Ограничение размера контента файла
+      let content = dirent.content;
+      if (content.length > MAX_CONTENT_SIZE_PER_FILE) {
+        const lines = content.split('\n');
+        let truncatedContent = '';
+        let currentSize = 0;
+
+        for (const line of lines) {
+          if (currentSize + line.length > MAX_CONTENT_SIZE_PER_FILE) {
+            truncatedContent += `\n\n[... Content truncated due to size limit ...]`;
+            break;
+          }
+          truncatedContent += line + '\n';
+          currentSize += line.length;
+        }
+        content = truncatedContent;
+      }
+
+      const codeWithLinesNumbers = content
         .split('\n')
         // .map((v, i) => `${i + 1}|${v}`)
         .join('\n');
@@ -85,7 +108,14 @@ export function createFilesContext(files: FileMap, useRelativePath?: boolean) {
       return `<boltAction type="file" filePath="${filePath}">${codeWithLinesNumbers}</boltAction>`;
     });
 
-  return `<boltArtifact id="code-content" title="Code Content" >\n${fileContexts.join('\n')}\n</boltArtifact>`;
+  const totalFiles = filePaths.filter((x) => files[x] && files[x].type == 'file').length;
+  const processedFiles = fileContexts.length;
+
+  return `<boltArtifact id="code-content" title="Code Content (${processedFiles}/${totalFiles} files)" >
+${fileContexts.join('\n')}
+
+${processedFiles < totalFiles ? `\n\n⚠️ Showing ${processedFiles} of ${totalFiles} files. Focus on the most relevant files for your task.` : ''}
+</boltArtifact>`;
 }
 
 export function extractCurrentContext(messages: Message[]) {

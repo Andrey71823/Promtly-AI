@@ -41,7 +41,8 @@ export const description = atom<string | undefined>(undefined);
 export const chatMetadata = atom<IChatMetadata | undefined>(undefined);
 export function useChatHistory() {
   const navigate = useNavigate();
-  const { id: mixedId } = useLoaderData<{ id?: string }>();
+  const loaderData = useLoaderData<{ id?: string }>();
+  const mixedId = loaderData?.id;
   const [searchParams] = useSearchParams();
 
   const [archivedMessages, setArchivedMessages] = useState<Message[]>([]);
@@ -130,7 +131,7 @@ export function useChatHistory() {
                   role: 'assistant',
 
                   // Combine followup message and the artifact with files and command actions
-                  content: `Bolt Restored your chat from a snapshot. You can revert this message to load the full chat history.
+                 content: `Promtly AI restored your chat from a snapshot. You can revert this message to load the full chat history.
                   <boltArtifact id="restored-project-setup" title="Restored Project & Setup" type="bundled">
                   ${Object.entries(snapshot?.files || {})
                     .map(([key, value]) => {
@@ -357,15 +358,23 @@ ${value.content}
       }
     },
     importChat: async (description: string, messages: Message[], metadata?: IChatMetadata) => {
+      console.log('🔄 importChat: Starting import...', { description, messageCount: messages.length });
+      
       if (!db) {
+        console.log('❌ importChat: No database available');
         return;
       }
 
       try {
+        console.log('💾 importChat: Creating chat from messages...');
         const newId = await createChatFromMessages(db, description, messages, metadata);
+        console.log('✅ importChat: Chat created with ID:', newId);
+        
+        console.log('🔄 importChat: Redirecting to chat...');
         window.location.href = `/chat/${newId}`;
         toast.success('Chat imported successfully');
       } catch (error) {
+        console.error('❌ importChat: Error occurred:', error);
         if (error instanceof Error) {
           toast.error('Failed to import chat: ' + error.message);
         } else {

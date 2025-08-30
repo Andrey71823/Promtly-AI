@@ -64,6 +64,13 @@ interface ChatBoxProps {
 }
 
 export const ChatBox: React.FC<ChatBoxProps> = (props) => {
+  const hideApiKeyUI = (typeof import.meta !== 'undefined' && (import.meta as any).env)
+    ? (String((import.meta as any).env.VITE_HIDE_API_KEY_UI ?? 'true').toLowerCase() !== 'false')
+    : true;
+  // NOTE: Model selector hidden temporarily via VITE_HIDE_MODEL_SELECTOR (set to 'false' to restore)
+  const hideModelSelector = (typeof import.meta !== 'undefined' && (import.meta as any).env)
+    ? (String((import.meta as any).env.VITE_HIDE_MODEL_SELECTOR ?? 'true').toLowerCase() !== 'false')
+    : true;
   return (
     <div
       className={classNames(
@@ -106,18 +113,21 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
         <ClientOnly>
           {() => (
             <div className={props.isModelSettingsCollapsed ? 'hidden' : ''}>
-              <ModelSelector
-                key={props.provider?.name + ':' + props.modelList.length}
-                model={props.model}
-                setModel={props.setModel}
-                modelList={props.modelList}
-                provider={props.provider}
-                setProvider={props.setProvider}
-                providerList={props.providerList || (PROVIDER_LIST as ProviderInfo[])}
-                apiKeys={props.apiKeys}
-                modelLoading={props.isModelLoading}
-              />
-              {(props.providerList || []).length > 0 &&
+              {!hideModelSelector && (
+                <ModelSelector
+                  key={props.provider?.name + ':' + props.modelList.length}
+                  model={props.model}
+                  setModel={props.setModel}
+                  modelList={props.modelList}
+                  provider={props.provider}
+                  setProvider={props.setProvider}
+                  providerList={props.providerList || (PROVIDER_LIST as ProviderInfo[])}
+                  apiKeys={props.apiKeys}
+                  modelLoading={props.isModelLoading}
+                />
+              )}
+              {!hideApiKeyUI &&
+                (props.providerList || []).length > 0 &&
                 props.provider &&
                 (!LOCAL_PROVIDERS.includes(props.provider.name) || 'OpenAILike') && (
                   <APIKeyManager

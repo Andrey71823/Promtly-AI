@@ -5,6 +5,7 @@ import { MAX_FILES, isBinaryFile, shouldIncludeFile } from '~/utils/fileUtils';
 import { createChatFromFolder } from '~/utils/folderImport';
 import { logStore } from '~/lib/stores/logs'; // Assuming logStore is imported from this location
 import { Button } from '~/components/ui/Button';
+import { ImportConfirmDialog } from '~/components/ui/ImportConfirmDialog';
 import { classNames } from '~/utils/classNames';
 
 interface ImportFolderButtonProps {
@@ -14,50 +15,44 @@ interface ImportFolderButtonProps {
 
 export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ className, importChat }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingFolderName, setPendingFolderName] = useState('');
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const allFiles = Array.from(e.target.files || []);
-
-    const filteredFiles = allFiles.filter((file) => {
-      const path = file.webkitRelativePath.split('/').slice(1).join('/');
-      const include = shouldIncludeFile(path);
-
-      return include;
-    });
-
-    if (filteredFiles.length === 0) {
-      const error = new Error('No valid files found');
-      logStore.logError('File import failed - no valid files', error, { folderName: 'Unknown Folder' });
-      toast.error('No files found in the selected folder');
-
-      return;
-    }
-
-    if (filteredFiles.length > MAX_FILES) {
-      const error = new Error(`Too many files: ${filteredFiles.length}`);
-      logStore.logError('File import failed - too many files', error, {
-        fileCount: filteredFiles.length,
-        maxFiles: MAX_FILES,
-      });
-      toast.error(
-        `This folder contains ${filteredFiles.length.toLocaleString()} files. This product is not yet optimized for very large projects. Please select a folder with fewer than ${MAX_FILES.toLocaleString()} files.`,
-      );
-
-      return;
-    }
-
-    const folderName = filteredFiles[0]?.webkitRelativePath.split('/')[0] || 'Unknown Folder';
+  const processFiles = async (files: File[]) => {
+    const folderName = files[0]?.webkitRelativePath.split('/')[0] || 'Unknown Folder';
     setIsLoading(true);
 
     const loadingToast = toast.loading(`Importing ${folderName}...`);
 
     try {
-      const fileChecks = await Promise.all(
-        filteredFiles.map(async (file) => ({
-          file,
-          isBinary: await isBinaryFile(file),
-        })),
-      );
+      // Optimization 1: Limit file size (maximum 10MB per file)
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      const validFiles = files.filter(file => file.size <= MAX_FILE_SIZE);
+
+      if (validFiles.length < files.length) {
+        const skippedCount = files.length - validFiles.length;
+        toast.info(`Skipped ${skippedCount} large files (>10MB)`);
+      }
+
+      // Optimization 2: Batch file processing instead of simultaneous
+      const BATCH_SIZE = 10;
+      const fileChecks = [];
+
+      for (let i = 0; i < validFiles.length; i += BATCH_SIZE) {
+        const batch = validFiles.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(
+          batch.map(async (file) => ({
+            file,
+            isBinary: await isBinaryFile(file),
+          })),
+        );
+        fileChecks.push(...batchResults);
+
+        // Update progress
+        const progress = Math.round((i + batch.length) / validFiles.length * 100);
+        toast.loading(`Processing files... ${progress}%`, { id: loadingToast });
+      }
 
       const textFiles = fileChecks.filter((f) => !f.isBinary).map((f) => f.file);
       const binaryFilePaths = fileChecks
@@ -68,7 +63,6 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
         const error = new Error('No text files found');
         logStore.logError('File import failed - no text files', error, { folderName });
         toast.error('No text files found in the selected folder');
-
         return;
       }
 
@@ -80,18 +74,34 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
         toast.info(`Skipping ${binaryFilePaths.length} binary files`);
       }
 
-      const messages = await createChatFromFolder(textFiles, binaryFilePaths, folderName);
+      // Optimization 3: Limit number of files to prevent overload
+      const MAX_CONTENT_FILES = 50;
+      const contentFiles = textFiles.slice(0, MAX_CONTENT_FILES);
+
+      if (textFiles.length > MAX_CONTENT_FILES) {
+        toast.info(`Showing first ${MAX_CONTENT_FILES} files. Large projects may need manual file selection.`);
+      }
+
+      const messages = await createChatFromFolder(contentFiles, binaryFilePaths, folderName);
+
+      console.log('💬 Import Folder: Created messages:', messages.length);
+      console.log('🔗 Import Folder: importChat function available:', !!importChat);
 
       if (importChat) {
+        console.log('🚀 Import Folder: Calling importChat...');
         await importChat(folderName, [...messages]);
+        console.log('✅ Import Folder: importChat completed');
+      } else {
+        console.log('❌ Import Folder: importChat function not available');
       }
 
       logStore.logSystem('Folder imported successfully', {
         folderName,
         textFileCount: textFiles.length,
         binaryFileCount: binaryFilePaths.length,
+        processedFiles: contentFiles.length,
       });
-      toast.success('Folder imported successfully');
+      toast.success(`Folder imported successfully (${contentFiles.length} files processed)`);
     } catch (error) {
       logStore.logError('Failed to import folder', error, { folderName });
       console.error('Failed to import folder:', error);
@@ -99,8 +109,58 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
     } finally {
       setIsLoading(false);
       toast.dismiss(loadingToast);
-      e.target.value = ''; // Reset file input
     }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🔍 Import Folder: File change detected');
+    const allFiles = Array.from(e.target.files || []);
+    console.log('📁 Import Folder: Total files selected:', allFiles.length);
+
+    const filteredFiles = allFiles.filter((file) => {
+      const path = file.webkitRelativePath.split('/').slice(1).join('/');
+      const include = shouldIncludeFile(path);
+      return include;
+    });
+    console.log('✅ Import Folder: Filtered files:', filteredFiles.length);
+
+    if (filteredFiles.length === 0) {
+      console.log('❌ Import Folder: No valid files found');
+      const error = new Error('No valid files found');
+      logStore.logError('File import failed - no valid files', error, { folderName: 'Unknown Folder' });
+      toast.error('No files found in the selected folder');
+      e.target.value = ''; // Reset file input
+      return;
+    }
+
+    const folderName = filteredFiles[0]?.webkitRelativePath.split('/')[0] || 'Unknown Folder';
+
+    // Check if files exceed limit
+    if (filteredFiles.length > MAX_FILES) {
+      // Show beautiful confirmation dialog instead of ugly toast
+      setPendingFiles(filteredFiles);
+      setPendingFolderName(folderName);
+      setShowConfirmDialog(true);
+      e.target.value = ''; // Reset file input
+      return;
+    }
+
+    // Process files normally if under limit
+    await processFiles(filteredFiles);
+    e.target.value = ''; // Reset file input
+  };
+
+  const handleConfirmImport = async () => {
+    setShowConfirmDialog(false);
+    await processFiles(pendingFiles);
+    setPendingFiles([]);
+    setPendingFolderName('');
+  };
+
+  const handleCancelImport = () => {
+    setShowConfirmDialog(false);
+    setPendingFiles([]);
+    setPendingFolderName('');
   };
 
   return (
@@ -116,8 +176,11 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
       />
       <Button
         onClick={() => {
+          console.log('🖱️ Import Folder: Button clicked');
           const input = document.getElementById('folder-import');
+          console.log('📄 Import Folder: Input element found:', !!input);
           input?.click();
+          console.log('🔄 Import Folder: Input click triggered');
         }}
         title="Import Folder"
         variant="default"
@@ -136,6 +199,15 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
         <span className="i-ph:upload-simple w-4 h-4" />
         {isLoading ? 'Importing...' : 'Import Folder'}
       </Button>
+
+      <ImportConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={handleCancelImport}
+        onConfirm={handleConfirmImport}
+        fileCount={pendingFiles.length}
+        maxFiles={MAX_FILES}
+        folderName={pendingFolderName}
+      />
     </>
   );
 };

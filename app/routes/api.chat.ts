@@ -95,34 +95,40 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
         }
 
         if (filePaths.length > 0 && contextOptimization) {
-          logger.debug('Generating Chat Summary');
-          dataStream.writeData({
-            type: 'progress',
-            label: 'summary',
-            status: 'in-progress',
-            order: progressCounter++,
-            message: 'Analysing Request',
-          } satisfies ProgressAnnotation);
+          try {
+            logger.debug('Generating Chat Summary');
+            dataStream.writeData({
+              type: 'progress',
+              label: 'summary',
+              status: 'in-progress',
+              order: progressCounter++,
+              message: 'Analysing Request',
+            } satisfies ProgressAnnotation);
 
-          // Create a summary of the chat
-          console.log(`Messages count: ${processedMessages.length}`);
+            // Create a summary of the chat
+            console.log(`Messages count: ${processedMessages.length}`);
 
-          summary = await createSummary({
-            messages: [...processedMessages],
-            env: context.cloudflare?.env,
-            apiKeys,
-            providerSettings,
-            promptId,
-            contextOptimization,
-            onFinish(resp) {
-              if (resp.usage) {
-                logger.debug('createSummary token usage', JSON.stringify(resp.usage));
-                cumulativeUsage.completionTokens += resp.usage.completionTokens || 0;
-                cumulativeUsage.promptTokens += resp.usage.promptTokens || 0;
-                cumulativeUsage.totalTokens += resp.usage.totalTokens || 0;
-              }
-            },
-          });
+            summary = await createSummary({
+              messages: [...processedMessages],
+              env: context.cloudflare?.env,
+              apiKeys,
+              providerSettings,
+              promptId,
+              contextOptimization,
+              onFinish(resp) {
+                if (resp && resp.usage) {
+                  logger.debug('createSummary token usage', JSON.stringify(resp.usage));
+                  cumulativeUsage.completionTokens += resp.usage.completionTokens || 0;
+                  cumulativeUsage.promptTokens += resp.usage.promptTokens || 0;
+                  cumulativeUsage.totalTokens += resp.usage.totalTokens || 0;
+                }
+              },
+            });
+          } catch (error) {
+            logger.error('Error creating chat summary:', error);
+            // Continue without summary if it fails
+            summary = undefined;
+          }
           dataStream.writeData({
             type: 'progress',
             label: 'summary',
@@ -149,24 +155,30 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
           // Select context files
           console.log(`Messages count: ${processedMessages.length}`);
-          filteredFiles = await selectContext({
-            messages: [...processedMessages],
-            env: context.cloudflare?.env,
-            apiKeys,
-            files,
-            providerSettings,
-            promptId,
-            contextOptimization,
-            summary,
-            onFinish(resp) {
-              if (resp.usage) {
-                logger.debug('selectContext token usage', JSON.stringify(resp.usage));
-                cumulativeUsage.completionTokens += resp.usage.completionTokens || 0;
-                cumulativeUsage.promptTokens += resp.usage.promptTokens || 0;
-                cumulativeUsage.totalTokens += resp.usage.totalTokens || 0;
-              }
-            },
-          });
+          try {
+            filteredFiles = await selectContext({
+              messages: [...processedMessages],
+              env: context.cloudflare?.env,
+              apiKeys,
+              files,
+              providerSettings,
+              promptId,
+              contextOptimization,
+              summary,
+              onFinish(resp) {
+                if (resp && resp.usage) {
+                  logger.debug('selectContext token usage', JSON.stringify(resp.usage));
+                  cumulativeUsage.completionTokens += resp.usage.completionTokens || 0;
+                  cumulativeUsage.promptTokens += resp.usage.promptTokens || 0;
+                  cumulativeUsage.totalTokens += resp.usage.totalTokens || 0;
+                }
+              },
+            });
+          } catch (error) {
+            logger.error('Error selecting context files:', error);
+            // Continue without filtered files if selection fails
+            filteredFiles = undefined;
+          }
 
           if (filteredFiles) {
             logger.debug(`files in context : ${JSON.stringify(Object.keys(filteredFiles))}`);

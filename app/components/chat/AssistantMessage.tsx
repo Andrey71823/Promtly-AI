@@ -61,7 +61,7 @@ function normalizedFilePath(path: string) {
 
 export const AssistantMessage = memo(
   ({
-    content,
+    content = '',
     annotations,
     messageId,
     onRewind,

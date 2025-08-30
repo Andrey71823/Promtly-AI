@@ -24,7 +24,10 @@ export interface Shortcuts {
 }
 
 export const URL_CONFIGURABLE_PROVIDERS = ['Ollama', 'LMStudio', 'OpenAILike'];
+// Local/self-hosted providers list (kept for UI that filters local providers)
 export const LOCAL_PROVIDERS = ['OpenAILike', 'LMStudio', 'Ollama'];
+// Providers disabled by default for new users to avoid complex setup (can be enabled in Settings)
+export const DISABLED_BY_DEFAULT_PROVIDERS = [...LOCAL_PROVIDERS, 'AmazonBedrock', 'Github'];
 
 export type ProviderSetting = Record<string, IProviderConfig>;
 
@@ -65,8 +68,8 @@ const getInitialProviderSettings = (): ProviderSetting => {
     initialSettings[provider.name] = {
       ...provider,
       settings: {
-        // Local providers should be disabled by default
-        enabled: !LOCAL_PROVIDERS.includes(provider.name),
+        // Hide advanced/local providers by default to provide a smooth out‑of‑the‑box experience
+        enabled: !DISABLED_BY_DEFAULT_PROVIDERS.includes(provider.name),
       },
     };
   });
@@ -152,7 +155,8 @@ const getInitialSettings = () => {
     autoSelectTemplate: getStoredBoolean(SETTINGS_KEYS.AUTO_SELECT_TEMPLATE, true),
     contextOptimization: getStoredBoolean(SETTINGS_KEYS.CONTEXT_OPTIMIZATION, true),
     eventLogs: getStoredBoolean(SETTINGS_KEYS.EVENT_LOGS, true),
-    promptId: isBrowser ? localStorage.getItem(SETTINGS_KEYS.PROMPT_ID) || 'default' : 'default',
+    // Use "default" prompt (which has your rebranded identity) as the production default
+    promptId: (isBrowser ? localStorage.getItem(SETTINGS_KEYS.PROMPT_ID) : null) || 'default',
     developerMode: getStoredBoolean(SETTINGS_KEYS.DEVELOPER_MODE, false),
   };
 };

@@ -118,14 +118,60 @@ export async function selectContext(props: {
     throw new Error('No user message found');
   }
 
-  // select files from the list of code file from the project that might be useful for the current request from the user
-  const resp = await generateText({
-    system: `
-        You are a software engineer. You are working on a project. You have access to the following files:
+  // Оптимизация 1: Простая логика выбора файлов без LLM запроса для часто встречающихся сценариев
+  const userQuestion = extractTextContent(lastUserMessage).toLowerCase();
+
+  // Быстрый анализ запроса пользователя для определения типа задачи
+  const isSetupRequest = userQuestion.includes('setup') || userQuestion.includes('install') || userQuestion.includes('run') || userQuestion.includes('start');
+  const isBugFixRequest = userQuestion.includes('fix') || userQuestion.includes('error') || userQuestion.includes('bug') || userQuestion.includes('issue');
+  const isFeatureRequest = userQuestion.includes('add') || userQuestion.includes('create') || userQuestion.includes('implement') || userQuestion.includes('feature');
+
+  let selectedFiles: string[] = [];
+
+  if (isSetupRequest) {
+    // Для запросов настройки выбираем конфигурационные файлы
+    selectedFiles = filePaths.filter(path =>
+      path.includes('package.json') ||
+      path.includes('package-lock.json') ||
+      path.includes('yarn.lock') ||
+      path.includes('tsconfig.json') ||
+      path.includes('vite.config') ||
+      path.includes('webpack.config') ||
+      path.includes('dockerfile') ||
+      path.includes('.env') ||
+      path.includes('readme')
+    ).slice(0, 5); // Максимум 5 файлов
+  } else if (isBugFixRequest) {
+    // Для исправления багов выбираем основные файлы исходного кода
+    selectedFiles = filePaths.filter(path =>
+      path.includes('.ts') || path.includes('.tsx') || path.includes('.js') || path.includes('.jsx')
+    ).slice(0, 5);
+  } else if (isFeatureRequest) {
+    // Для новых фич выбираем компоненты и основные файлы
+    selectedFiles = filePaths.filter(path =>
+      (path.includes('.ts') || path.includes('.tsx') || path.includes('.js') || path.includes('.jsx')) &&
+      !path.includes('test') && !path.includes('spec')
+    ).slice(0, 5);
+  }
+
+  // Оптимизация 2: Обработка выбранных файлов
+  let includeFiles: string[] = [];
+  let excludeFiles: string[] = [];
+
+  if (selectedFiles.length > 0) {
+    // Используем предварительно выбранные файлы
+    includeFiles = selectedFiles.map(path => path.startsWith('/home/project/') ? path : `/home/project/${path}`);
+  } else {
+    // Для остальных случаев используем LLM, но с ограниченным контекстом
+    const limitedFilePaths = filePaths.slice(0, 20); // Ограничиваем до 20 файлов для анализа
+
+    const resp = await generateText({
+      system: `
+        You are a software engineer. You have access to the following files:
 
         AVAILABLE FILES PATHS
         ---
-        ${filePaths.map((path) => `- ${path}`).join('\n')}
+        ${limitedFilePaths.map((path) => `- ${path}`).join('\n')}
         ---
 
         You have following code loaded in the context buffer that you can refer to:
@@ -134,8 +180,6 @@ export async function selectContext(props: {
         ---
         ${context}
         ---
-
-        Now, you are given a task. You need to select the files that are relevant to the task from the list of files above.
 
         RESPONSE FORMAT:
         your response should be in following format:
@@ -152,7 +196,7 @@ export async function selectContext(props: {
         * You should not include any file that is already in the context buffer.
         * If no changes are needed, you can leave the response empty updateContextBuffer tag.
         `,
-    prompt: `
+      prompt: `
         ${summaryText}
 
         Users Question: ${extractTextContent(lastUserMessage)}
@@ -162,70 +206,82 @@ export async function selectContext(props: {
         CRITICAL RULES:
         * Only include relevant files in the context buffer.
         * context buffer should not include any file that is not in the list of files above.
-        * context buffer is extremlly expensive, so only include files that are absolutely necessary.
+        * context buffer is expensive, so only include files that are absolutely necessary.
         * If no changes are needed, you can leave the response empty updateContextBuffer tag.
-        * Only 5 files can be placed in the context buffer at a time.
-        * if the buffer is full, you need to exclude files that is not needed and include files that is relevent.
+        * Maximum 3 files can be placed in the context buffer at a time.
 
         `,
-    model: provider.getModelInstance({
-      model: currentModel,
-      serverEnv,
-      apiKeys,
-      providerSettings,
-    }),
-  });
+      model: provider.getModelInstance({
+        model: currentModel,
+        serverEnv,
+        apiKeys,
+        providerSettings,
+      }),
+    });
 
-  const response = resp.text;
-  const updateContextBuffer = response.match(/<updateContextBuffer>([\s\S]*?)<\/updateContextBuffer>/);
+    const response = resp.text;
 
-  if (!updateContextBuffer) {
-    throw new Error('Invalid response. Please follow the response format');
-  }
+    // Обрабатываем ответ LLM
+    const updateContextBuffer = response.match(/<updateContextBuffer>([\s\S]*?)<\/updateContextBuffer>/);
 
-  const includeFiles =
-    updateContextBuffer[1]
+    if (!updateContextBuffer) {
+      throw new Error('Invalid response. Please follow the response format');
+    }
+
+    includeFiles = updateContextBuffer[1]
       .match(/<includeFile path="(.*?)"/gm)
       ?.map((x) => x.replace('<includeFile path="', '').replace('"', '')) || [];
-  const excludeFiles =
-    updateContextBuffer[1]
+    excludeFiles = updateContextBuffer[1]
       .match(/<excludeFile path="(.*?)"/gm)
       ?.map((x) => x.replace('<excludeFile path="', '').replace('"', '')) || [];
+  }
 
   const filteredFiles: FileMap = {};
-  excludeFiles.forEach((path) => {
-    delete contextFiles[path];
-  });
-  includeFiles.forEach((path) => {
-    let fullPath = path;
 
-    if (!path.startsWith('/home/project/')) {
-      fullPath = `/home/project/${path}`;
-    }
+  // Защита от undefined/null значений
+  if (excludeFiles && Array.isArray(excludeFiles)) {
+    excludeFiles.forEach((path) => {
+      if (path && contextFiles) {
+        delete contextFiles[path];
+      }
+    });
+  }
 
-    if (!filePaths.includes(fullPath)) {
-      logger.error(`File ${path} is not in the list of files above.`);
-      return;
+  if (includeFiles && Array.isArray(includeFiles)) {
+    includeFiles.forEach((path) => {
+      if (!path) return;
 
-      // throw new Error(`File ${path} is not in the list of files above.`);
-    }
+      let fullPath = path;
 
-    if (currrentFiles.includes(path)) {
-      return;
-    }
+      if (!path.startsWith('/home/project/')) {
+        fullPath = `/home/project/${path}`;
+      }
 
-    filteredFiles[path] = files[fullPath];
-  });
+      if (!filePaths || !filePaths.includes(fullPath)) {
+        logger.error(`File ${path} is not in the list of files above.`);
+        return;
+      }
 
-  if (onFinish) {
+      if (currrentFiles && currrentFiles.includes(path)) {
+        return;
+      }
+
+      if (files && files[fullPath]) {
+        filteredFiles[path] = files[fullPath];
+      }
+    });
+  }
+
+  if (onFinish && resp) {
     onFinish(resp);
   }
 
-  const totalFiles = Object.keys(filteredFiles).length;
+  const totalFiles = filteredFiles ? Object.keys(filteredFiles).length : 0;
   logger.info(`Total files: ${totalFiles}`);
 
   if (totalFiles == 0) {
-    throw new Error(`Bolt failed to select files`);
+    logger.warn(`Bolt failed to select files - returning empty context`);
+    return {};
   }
 
   return filteredFiles;
