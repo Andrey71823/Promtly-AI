@@ -57,6 +57,7 @@ export class WorkbenchStore {
   modifiedFiles = new Set<string>();
   artifactIdList: string[] = [];
   #globalExecutionQueue = Promise.resolve();
+  #autoStartedMessages = new Set<string>();
   constructor() {
     if (import.meta.hot) {
       import.meta.hot.data.artifacts = this.artifacts;
@@ -518,6 +519,84 @@ export class WorkbenchStore {
 
     this.artifacts.setKey(messageId, { ...artifact, ...state });
   }
+
+  /**
+   * Ensure dev server starts automatically once after an artifact with file changes is closed.
+   * This helps beginners: if no preview is running yet, we run install and start commands for them.
+   */
+  async maybeAutoStartOnArtifactClose(data: ArtifactCallbackData) {
+    try {
+      const { messageId, id: artifactId } = data;
+
+      if (this.#autoStartedMessages.has(messageId)) {
+        return;
+      }
+
+      // If a preview already exists, skip
+      const previews = this.previews.get();
+      const hasAnyPreview = Array.isArray(previews) && previews.length > 0;
+
+      if (hasAnyPreview) {
+        return;
+      }
+
+      const artifact = this.#getArtifact(messageId);
+
+      if (!artifact) {
+        return;
+      }
+
+      // If the artifact already has a start action queued, skip
+      const actions = artifact.runner.actions.get();
+      const hasStart = Object.values(actions).some((a) => a?.type === 'start');
+
+      if (hasStart) {
+        return;
+      }
+
+      // Heuristic: if there were any file actions or core files present, auto start
+      const hasFileActions = Object.values(actions).some((a) => a?.type === 'file');
+
+      if (!hasFileActions) {
+        return;
+      }
+
+      const shellActionId = `auto-shell-${Date.now()}`;
+      const startActionId = `auto-start-${Date.now()}`;
+
+      // Queue and run npm install
+      await this._addAction({
+        artifactId,
+        messageId,
+        actionId: shellActionId,
+        action: { type: 'shell', content: 'npm install' } as any,
+      });
+      await this._runAction({
+        artifactId,
+        messageId,
+        actionId: shellActionId,
+        action: { type: 'shell', content: 'npm install' } as any,
+      });
+
+      // Queue and run npm run dev
+      await this._addAction({
+        artifactId,
+        messageId,
+        actionId: startActionId,
+        action: { type: 'start', content: 'npm run dev' } as any,
+      });
+      await this._runAction({
+        artifactId,
+        messageId,
+        actionId: startActionId,
+        action: { type: 'start', content: 'npm run dev' } as any,
+      });
+
+      this.#autoStartedMessages.add(messageId);
+    } catch (error) {
+      console.error('[Workbench] Auto-start failed:', error);
+    }
+  }
   addAction(data: ActionCallbackData) {
     // this._addAction(data);
 
@@ -590,9 +669,21 @@ export class WorkbenchStore {
       if (!isStreaming) {
         await artifact.runner.runAction(data);
         this.resetAllFileModifications();
+
+        // After applying file changes, auto-switch to preview so users immediately see results
+        if (this.currentView.value !== 'preview') {
+          this.currentView.set('preview');
+        }
       }
     } else {
       await artifact.runner.runAction(data);
+
+      // If a dev server is being started, switch to preview automatically
+      if (data.action.type === 'start') {
+        if (this.currentView.value !== 'preview') {
+          this.currentView.set('preview');
+        }
+      }
     }
   }
 

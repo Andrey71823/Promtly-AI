@@ -292,9 +292,9 @@ ${value.content}
       }
 
       let chatSummary: string | undefined = undefined;
-      const lastMessage = messages[messages.length - 1];
+      const lastMessage = messages && messages.length > 0 ? messages[messages.length - 1] : null;
 
-      if (lastMessage.role === 'assistant') {
+      if (lastMessage && lastMessage.role === 'assistant') {
         const annotations = lastMessage.annotations as JSONValue[];
         const filteredAnnotations = (annotations?.filter(
           (annotation: JSONValue) =>

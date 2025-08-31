@@ -18,6 +18,8 @@ const messageParser = new StreamingMessageParser({
       logger.trace('onArtifactClose');
 
       workbenchStore.updateArtifact(data, { closed: true });
+      // Ensure preview/dev server for first-time users
+      workbenchStore.maybeAutoStartOnArtifactClose(data);
     },
     onActionOpen: (data) => {
       logger.trace('onActionOpen', data.action);
