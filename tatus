@@ -1,0 +1,89 @@
+[33mcommit f33880c1f03656aa80f72516277379777ae0ad97[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m
+Author: Andrey71823 <100from100@gmail.com>
+Date:   Sat Aug 30 22:03:17 2025 +0500
+
+    Initial commit: Promtly AI - Advanced AI Development Assistant
+    
+    Features:
+    - AI-powered code generation and chat interface
+    - WebContainer integration for in-browser development
+    - Support for multiple LLM providers (OpenAI, Anthropic, Google, etc.)
+    - Real-time code editing with syntax highlighting
+    - File/folder import functionality with performance optimizations
+    - Drag & drop component support (planned)
+    - Multi-language support with English localization
+    - Modern UI components with Mantine and Tailwind CSS
+    - Responsive design for desktop and mobile
+    - Git integration and deployment options
+    - MCP (Model Context Protocol) support
+    - Supabase and Netlify integrations
+    
+    Performance Optimizations:
+    - File size limits and batch processing for folder imports
+    - Message virtualization and context trimming
+    - Lazy loading for WebContainer initialization
+    - Error handling and fallback UI components
+    
+    UI/UX Improvements:
+    - Rebranded from Bolt.diy to Promtly AI
+    - Enhanced main page with feature showcase
+    - Tech stack visualization
+    - Improved settings panel for developers
+    - Dark/light theme support
+    
+    Bug Fixes:
+    - Fixed undefined/null reference errors
+    - Improved CORS handling
+    - Better error boundaries and user feedback
+    - Enhanced LLM context selection logic
+    
+    Project Structure:
+    - React + Remix + Vite frontend
+    - TypeScript for type safety
+    - SCSS for styling
+    - Electron for desktop app
+    - Docker support for deployment
+
+ app/components/chat/APIKeyManager.tsx              |     6 [32m+[m
+ app/components/chat/AssistantMessage.tsx           |     2 [32m+[m[31m-[m
+ app/components/chat/BaseChat.tsx                   |    63 [32m+[m[31m-[m
+ app/components/chat/Chat.client.tsx                |    12 [32m+[m[31m-[m
+ app/components/chat/ChatAlert.tsx                  |     6 [32m+[m[31m-[m
+ app/components/chat/ChatBox.tsx                    |    34 [32m+[m[31m-[m
+ app/components/chat/ImportFolderButton.tsx         |   154 [32m+[m[31m-[m
+ app/components/chat/Markdown.tsx                   |    11 [32m+[m[31m-[m
+ app/components/chat/Messages.client.tsx            |    28 [32m+[m[31m-[m
+ app/components/deploy/DeployAlert.tsx              |     2 [32m+[m[31m-[m
+ app/components/ui/ImportConfirmDialog.tsx          |    91 [32m+[m
+ app/components/workbench/Preview.tsx               |    29 [32m+[m
+ app/components/workbench/PreviewLoadingOverlay.tsx |    95 [32m+[m
+ app/lib/.server/llm/select-context.ts              |   152 [32m+[m[31m-[m
+ app/lib/.server/llm/stream-text.ts                 |    10 [32m+[m[31m-[m
+ app/lib/.server/llm/utils.ts                       |    34 [32m+[m[31m-[m
+ app/lib/common/prompts/discuss-prompt.ts           |    10 [32m+[m[31m-[m
+ app/lib/common/prompts/new-prompt.ts               |     8 [32m+[m[31m-[m
+ app/lib/common/prompts/optimized.ts                |     2 [32m+[m[31m-[m
+ app/lib/common/prompts/prompts.ts                  |     6 [32m+[m[31m-[m
+ app/lib/persistence/db.ts                          |   342 [32m+[m[31m-[m
+ app/lib/persistence/useChatHistory.ts              |    13 [32m+[m[31m-[m
+ app/lib/runtime/action-runner.ts                   |    15 [32m+[m
+ app/lib/stores/previewLoading.ts                   |   228 [32m+[m
+ app/lib/stores/previews.ts                         |    11 [32m+[m
+ app/lib/stores/settings.ts                         |    10 [32m+[m[31m-[m
+ app/lib/webcontainer/index.ts                      |   123 [32m+[m[31m-[m
+ app/routes/_index.tsx                              |     2 [32m+[m[31m-[m
+ app/routes/api.chat.ts                             |   104 [32m+[m[31m-[m
+ app/routes/api.llmcall.ts                          |     9 [32m+[m[31m-[m
+ app/routes/api.models.$provider.ts                 |    34 [32m+[m[31m-[m
+ app/routes/chat.$id.tsx                            |     7 [32m+[m[31m-[m
+ app/routes/webcontainer.connect.$id.tsx            |     2 [32m+[m[31m-[m
+ app/styles/components/preview-loading-overlay.scss |    87 [32m+[m
+ app/styles/index.scss                              |     1 [32m+[m
+ app/utils/constants.ts                             |     4 [32m+[m[31m-[m
+ app/utils/diff.ts                                  |     2 [32m+[m[31m-[m
+ app/utils/folderImport.ts                          |    63 [32m+[m[31m-[m
+ app/utils/selectStarterTemplate.ts                 |     2 [32m+[m[31m-[m
+ package-lock.json                                  | 33528 [32m+++++++++++++++++++[m
+ vite.config.ts                                     |     4 [32m+[m[31m-[m
+ ...ig.ts.timestamp-1755176003077-2989934738cfd.mjs |    96 [32m+[m
+ 42 files changed, 35149 insertions(+), 293 deletions(-)

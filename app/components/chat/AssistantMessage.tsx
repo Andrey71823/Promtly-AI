@@ -61,7 +61,7 @@ function normalizedFilePath(path: string) {
 
 export const AssistantMessage = memo(
   ({
-    content = '',
+    content,
     annotations,
     messageId,
     onRewind,
@@ -74,6 +74,8 @@ export const AssistantMessage = memo(
     parts,
     addToolResult,
   }: AssistantMessageProps) => {
+    // Ensure content is always a string
+    const safeContent = typeof content === 'string' ? content : '';
     const filteredAnnotations = (annotations?.filter(
       (annotation: JSONValue) =>
         annotation && typeof annotation === 'object' && Object.keys(annotation).includes('type'),
@@ -177,7 +179,7 @@ export const AssistantMessage = memo(
           </div>
         </>
         <Markdown append={append} chatMode={chatMode} setChatMode={setChatMode} model={model} provider={provider} html>
-          {content}
+          {safeContent}
         </Markdown>
         {toolInvocations && toolInvocations.length > 0 && (
           <ToolInvocations

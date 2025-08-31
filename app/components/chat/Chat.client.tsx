@@ -433,12 +433,41 @@ export const ChatImpl = memo(
 
       let finalMessageContent = messageContent;
 
-      if (selectedElement && selectedElement.displayText) {
+      // Accept both displayText and textContent from Inspector payloads
+      const selectedText = selectedElement?.displayText || (selectedElement as any)?.textContent;
+
+      if (selectedElement && selectedText && typeof selectedText === 'string') {
         console.log('Selected Element:', selectedElement);
+        console.log('Selected Text:', selectedText);
 
         try {
-          const elementInfo = `<div class=\"__boltSelectedElement__\" data-element='${JSON.stringify(selectedElement)}'>${JSON.stringify(`${selectedElement.displayText}`)}</div>`;
+          // Generate a unique message ID for the selected element (like old working code)
+          const messageId = `selected-element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          console.log('Generated messageId:', messageId);
+
+          // Validate selectedElement properties to prevent JSON serialization errors
+          const safeSelectedElement = {
+            tagName: selectedElement.tagName || 'UNKNOWN',
+            displayText: selectedText || 'No content',
+            className: selectedElement.className || '',
+            styles: selectedElement.styles || {},
+            id: selectedElement.id || '',
+          };
+
+          // Double-check that all required properties are present
+          if (!safeSelectedElement.tagName || !safeSelectedElement.displayText) {
+            console.warn('Selected element missing required properties, skipping');
+            finalMessageContent = messageContent;
+            return;
+          }
+
+          // Create element info like in old working code, but with messageId
+          const elementInfo = `<div class="__boltSelectedElement__" data-message-id="${messageId}" data-element='${JSON.stringify(safeSelectedElement)}'>${JSON.stringify(safeSelectedElement.displayText)}</div>`;
+          console.log('Element info to be added:', elementInfo.substring(0, 200) + '...');
+          console.log('Generated messageId for element:', messageId);
+          console.log('Full element info:', elementInfo);
           finalMessageContent = messageContent + elementInfo;
+          console.log('Final message content length:', finalMessageContent.length);
         } catch (error) {
           console.error('Error processing selected element:', error);
           // Continue without element info if there's an error
@@ -516,7 +545,21 @@ export const ChatImpl = memo(
         }
 
         // If autoSelectTemplate is disabled or template selection failed, proceed with normal message
-        const userMessageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
+        // But always include current project files context for AI to generate code
+        let userMessageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
+
+        // Add current project files context if available
+        if (Object.keys(files).length > 0) {
+          const projectFilesArtifact = filesToArtifacts(files, `project-context-${Date.now()}`);
+          console.log('Adding project context:', projectFilesArtifact.substring(0, 200) + '...');
+          userMessageText += `\n\n${projectFilesArtifact}`;
+
+          // Add specific instruction about correct imports
+          userMessageText += `\n\nCRITICAL: Use correct Lucide React imports:`;
+          userMessageText += `\nimport { GitHub, Rocket, Heart } from 'lucide-react';`;
+          userMessageText += `\n// NOT: import { Github, Rocket, Heart } from 'lucide-react';`;
+        }
+
         const attachments = uploadedFiles.length > 0 ? await filesToAttachments(uploadedFiles) : undefined;
 
         setMessages([

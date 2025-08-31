@@ -33,10 +33,13 @@ export const Markdown = memo(
           const dataProps = node?.properties as Record<string, unknown>;
 
           if (className?.includes('__boltArtifact__')) {
-            const messageId = node?.properties.dataMessageId as string;
+            // Accept both dataMessageId and data-message-id
+            const messageId =
+              (node?.properties.dataMessageId as string) ||
+              (node?.properties['data-message-id'] as string);
 
             if (!messageId) {
-              logger.error(`Invalid message id ${messageId}`);
+              logger.error(`Invalid message id: ${messageId || 'undefined'}`);
               return <div>⚠️ Error: Invalid artifact message ID</div>;
             }
 
@@ -44,10 +47,52 @@ export const Markdown = memo(
           }
 
           if (className?.includes('__boltSelectedElement__')) {
-            const messageId = node?.properties.dataMessageId as string;
-            const elementDataAttr = node?.properties.dataElement as string;
+            // Try to get messageId from various sources
+            let messageId: string | undefined;
 
-            // Parse the element data if it exists
+            // First try direct access to properties
+            if (node?.properties) {
+              messageId = node.properties['data-message-id'] as string ||
+                         node.properties.dataMessageId as string;
+            }
+
+            // If not found, try attributes
+            if (!messageId && node?.attributes) {
+              messageId = node.attributes['data-message-id'] as string ||
+                         node.attributes.dataMessageId as string;
+            }
+
+            // Try direct property access as last resort
+            if (!messageId && node) {
+              messageId = (node as any)['data-message-id'] ||
+                         (node as any).dataMessageId;
+            }
+
+            // Get element data
+            let elementDataAttr: string | undefined;
+            if (node?.properties) {
+              elementDataAttr = node.properties['data-element'] as string ||
+                               node.properties.dataElement as string;
+            }
+            if (!elementDataAttr && node?.attributes) {
+              elementDataAttr = node.attributes['data-element'] as string ||
+                               node.attributes.dataElement as string;
+            }
+
+            // Debug logging
+            console.log('Inspector Debug:', {
+              messageId,
+              nodeProps: node?.properties,
+              nodeAttrs: node?.attributes,
+              elementDataAttr: elementDataAttr?.substring(0, 100)
+            });
+
+            // Always generate a valid messageId, even if none was found
+            const validMessageId = messageId || `selected-element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            console.log('Inspector: Final messageId:', validMessageId);
+
+            // Parse element data first, then handle messageId
             let elementData: any = null;
 
             if (elementDataAttr) {
@@ -55,13 +100,53 @@ export const Markdown = memo(
                 elementData = JSON.parse(elementDataAttr);
               } catch (e) {
                 console.error('Failed to parse element data:', e);
-                return <div>⚠️ Error: Failed to parse element data</div>;
               }
             }
 
-            if (!messageId) {
-              logger.error(`Invalid message id ${messageId}`);
-              return <div>⚠️ Error: Invalid selected element message ID</div>;
+            // If we still don't have a valid messageId, don't fail - just render the element (like old code)
+            if (!validMessageId) {
+              console.warn('Inspector: No valid messageId found, rendering without it');
+              return (
+                <div className="bg-bolt-elements-background-depth-3 border border-bolt-elements-borderColor rounded-lg p-3 my-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-mono bg-bolt-elements-background-depth-2 px-2 py-1 rounded text-bolt-elements-textTer">
+                      {elementData?.tagName || 'UNKNOWN'}
+                    </span>
+                    {elementData?.className && (
+                      <span className="text-xs text-bolt-elements-textSecondary">.{elementData.className}</span>
+                    )}
+                  </div>
+                  <code className="block text-sm !text-bolt-elements-textSecondary !bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor p-2 rounded">
+                    {elementData?.displayText || 'No content'}
+                  </code>
+                </div>
+              );
+            }
+
+            console.log('Valid messageId generated:', validMessageId);
+
+            // Element data is already parsed above
+
+            if (elementDataAttr) {
+              try {
+                elementData = JSON.parse(elementDataAttr);
+
+                // Validate elementData structure
+                if (elementData && typeof elementData === 'object') {
+                  elementData = {
+                    tagName: elementData.tagName || 'UNKNOWN',
+                    displayText: elementData.displayText || 'No content',
+                    className: elementData.className || '',
+                    styles: elementData.styles || {},
+                    id: elementData.id || '',
+                  };
+                } else {
+                  elementData = null;
+                }
+              } catch (e) {
+                console.error('Failed to parse element data:', e);
+                return <div>⚠️ Error: Failed to parse element data</div>;
+              }
             }
 
             if (!elementData) {
@@ -77,6 +162,9 @@ export const Markdown = memo(
                   {elementData?.className && (
                     <span className="text-xs text-bolt-elements-textSecondary">.{elementData.className}</span>
                   )}
+                  <span className="text-xs text-bolt-elements-textTertiary ml-auto">
+                    ID: {validMessageId.slice(-8)}
+                  </span>
                 </div>
                 <code className="block text-sm !text-bolt-elements-textSecondary !bg-bolt-elements-background-depth-2 border border-bolt-elements-borderColor p-2 rounded">
                   {elementData?.displayText || 'No content'}

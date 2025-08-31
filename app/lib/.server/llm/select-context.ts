@@ -69,10 +69,14 @@ export async function selectContext(props: {
 
     if (!modelDetails) {
       // Fallback to first model
-      logger.warn(
-        `MODEL [${currentModel}] not found in provider [${provider.name}]. Falling back to first model. ${modelsList[0].name}`,
-      );
-      modelDetails = modelsList[0];
+      if (modelsList && modelsList.length > 0) {
+        logger.warn(
+          `MODEL [${currentModel}] not found in provider [${provider.name}]. Falling back to first model. ${modelsList[0].name}`,
+        );
+        modelDetails = modelsList[0];
+      } else {
+        throw new Error(`No models available for provider ${provider.name}`);
+      }
     }
   }
 
@@ -88,7 +92,7 @@ export async function selectContext(props: {
   const currrentFiles: string[] = [];
   const contextFiles: FileMap = {};
 
-  if (codeContext?.type === 'codeContext') {
+  if (codeContext?.type === 'codeContext' && codeContext.files) {
     const codeContextFiles: string[] = codeContext.files;
     Object.keys(files || {}).forEach((path) => {
       let relativePath = path;
@@ -112,7 +116,8 @@ export async function selectContext(props: {
       ? (message.content.find((item) => item.type === 'text')?.text as string) || ''
       : message.content;
 
-  const lastUserMessage = processedMessages.filter((x) => x.role == 'user').pop();
+  const userMessages = processedMessages.filter((x) => x.role == 'user');
+  const lastUserMessage = userMessages.length > 0 ? userMessages[userMessages.length - 1] : null;
 
   if (!lastUserMessage) {
     throw new Error('No user message found');
@@ -157,6 +162,8 @@ export async function selectContext(props: {
   // Оптимизация 2: Обработка выбранных файлов
   let includeFiles: string[] = [];
   let excludeFiles: string[] = [];
+  // Важно: не использовать переменную resp вне блока, чтобы не ловить ReferenceError
+  let responseText: string = '';
 
   if (selectedFiles.length > 0) {
     // Используем предварительно выбранные файлы
@@ -165,75 +172,91 @@ export async function selectContext(props: {
     // Для остальных случаев используем LLM, но с ограниченным контекстом
     const limitedFilePaths = filePaths.slice(0, 20); // Ограничиваем до 20 файлов для анализа
 
-    const resp = await generateText({
-      system: `
-        You are a software engineer. You have access to the following files:
+    try {
+      const resp = await generateText({
+        system: `
+          You are a software engineer. You have access to the following files:
 
-        AVAILABLE FILES PATHS
-        ---
-        ${limitedFilePaths.map((path) => `- ${path}`).join('\n')}
-        ---
+          AVAILABLE FILES PATHS
+          ---
+          ${limitedFilePaths.map((path) => `- ${path}`).join('\n')}
+          ---
 
-        You have following code loaded in the context buffer that you can refer to:
+          You have following code loaded in the context buffer that you can refer to:
 
-        CURRENT CONTEXT BUFFER
-        ---
-        ${context}
-        ---
+          CURRENT CONTEXT BUFFER
+          ---
+          ${context}
+          ---
 
-        RESPONSE FORMAT:
-        your response should be in following format:
----
-<updateContextBuffer>
-    <includeFile path="path/to/file"/>
-    <excludeFile path="path/to/file"/>
-</updateContextBuffer>
----
-        * Your should start with <updateContextBuffer> and end with </updateContextBuffer>.
-        * You can include multiple <includeFile> and <excludeFile> tags in the response.
-        * You should not include any other text in the response.
-        * You should not include any file that is not in the list of files above.
-        * You should not include any file that is already in the context buffer.
-        * If no changes are needed, you can leave the response empty updateContextBuffer tag.
-        `,
-      prompt: `
-        ${summaryText}
+          RESPONSE FORMAT:
+          your response should be in following format:
+  ---
+  <updateContextBuffer>
+      <includeFile path="path/to/file"/>
+      <excludeFile path="path/to/file"/>
+  </updateContextBuffer>
+  ---
+          * Your should start with <updateContextBuffer> and end with </updateContextBuffer>.
+          * You can include multiple <includeFile> and <excludeFile> tags in the response.
+          * You should not include any other text in the response.
+          * You should not include any file that is not in the list of files above.
+          * You should not include any file that is already in the context buffer.
+          * If no changes are needed, you can leave the response empty updateContextBuffer tag.
+          `,
+        prompt: `
+          ${summaryText}
 
-        Users Question: ${extractTextContent(lastUserMessage)}
+          Users Question: ${extractTextContent(lastUserMessage)}
 
-        update the context buffer with the files that are relevant to the task from the list of files above.
+          update the context buffer with the files that are relevant to the task from the list of files above.
 
-        CRITICAL RULES:
-        * Only include relevant files in the context buffer.
-        * context buffer should not include any file that is not in the list of files above.
-        * context buffer is expensive, so only include files that are absolutely necessary.
-        * If no changes are needed, you can leave the response empty updateContextBuffer tag.
-        * Maximum 3 files can be placed in the context buffer at a time.
+          CRITICAL RULES:
+          * Only include relevant files in the context buffer.
+          * context buffer should not include any file that is not in the list of files above.
+          * context buffer is expensive, so only include files that are absolutely necessary.
+          * If no changes are needed, you can leave the response empty updateContextBuffer tag.
+          * Maximum 3 files can be placed in the context buffer at a time.
 
-        `,
-      model: provider.getModelInstance({
-        model: currentModel,
-        serverEnv,
-        apiKeys,
-        providerSettings,
-      }),
-    });
+          `,
+        model: provider.getModelInstance({
+          model: currentModel,
+          serverEnv,
+          apiKeys,
+          providerSettings,
+        }),
+      });
 
-    const response = resp.text;
+      // Сохраняем текст и пробрасываем usage вверх только если доступно
+      responseText = resp?.text || '';
+      if (onFinish && resp && resp.usage) {
+        onFinish(resp);
+      }
+    } catch (error) {
+      logger.error('Failed to generate text for context selection:', error);
+      // В случае ошибки возвращаем пустой контекст
+      return {};
+    }
+  }
 
+  const response = responseText;
+
+  if (response) {
     // Обрабатываем ответ LLM
     const updateContextBuffer = response.match(/<updateContextBuffer>([\s\S]*?)<\/updateContextBuffer>/);
 
-    if (!updateContextBuffer) {
-      throw new Error('Invalid response. Please follow the response format');
+    if (updateContextBuffer && updateContextBuffer[1]) {
+      includeFiles = updateContextBuffer[1]
+        .match(/<includeFile path="(.*?)"/gm)
+        ?.map((x) => x.replace('<includeFile path="', '').replace('"', '')) || [];
+      excludeFiles = updateContextBuffer[1]
+        .match(/<excludeFile path="(.*?)"/gm)
+        ?.map((x) => x.replace('<excludeFile path="', '').replace('"', '')) || [];
+    } else {
+      logger.warn('No valid updateContextBuffer found in LLM response, using empty context');
     }
-
-    includeFiles = updateContextBuffer[1]
-      .match(/<includeFile path="(.*?)"/gm)
-      ?.map((x) => x.replace('<includeFile path="', '').replace('"', '')) || [];
-    excludeFiles = updateContextBuffer[1]
-      .match(/<excludeFile path="(.*?)"/gm)
-      ?.map((x) => x.replace('<excludeFile path="', '').replace('"', '')) || [];
+  } else {
+    logger.warn('Empty response from LLM, using empty context');
   }
 
   const filteredFiles: FileMap = {};
@@ -272,9 +295,7 @@ export async function selectContext(props: {
     });
   }
 
-  if (onFinish && resp) {
-    onFinish(resp);
-  }
+  // onFinish уже вызван выше, если resp был получен
 
   const totalFiles = filteredFiles ? Object.keys(filteredFiles).length : 0;
   logger.info(`Total files: ${totalFiles}`);
@@ -285,8 +306,6 @@ export async function selectContext(props: {
   }
 
   return filteredFiles;
-
-  // generateText({
 }
 
 export function getFilePaths(files: FileMap) {
