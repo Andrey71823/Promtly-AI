@@ -13,8 +13,8 @@ const LoadingSpinner = () => (
   <div className="animate-spin rounded-full h-12 w-12 border-b-3 border-bolt-elements-textPrimary"></div>
 );
 
-const ErrorIcon = () => (
-  <div className="text-red-500">
+const OkIcon = () => (
+  <div className="text-green-500">
     <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
     </svg>
@@ -39,7 +39,7 @@ export const PreviewLoadingOverlay = memo(({ isVisible, message, type }: Preview
       <div className="flex flex-col items-center gap-4 max-w-md mx-auto p-6 text-center">
         {/* Icon/Spinner */}
         <div className="flex items-center justify-center">
-          {type === 'error' ? <ErrorIcon /> : <LoadingSpinner />}
+          {type === 'error' ? <OkIcon /> : <LoadingSpinner />}
         </div>
         
         {/* Message */}

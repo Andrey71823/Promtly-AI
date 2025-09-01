@@ -690,6 +690,33 @@ export class WorkbenchStore {
           const { previewLoadingManager } = await import('~/lib/stores/previewLoading');
           previewLoadingManager.setLoadingState('starting');
         } catch {}
+
+        // Fallback: if server didn't become ready shortly after start, attempt one automatic restart
+        try {
+          const waitMs = 10000;
+          setTimeout(async () => {
+            try {
+              const anyReady = (this.previews.get() || []).some((p) => p.ready);
+
+              if (!anyReady) {
+                // Re-run start action once
+                const restartActionId = `auto-restart-${Date.now()}`;
+                await this._addAction({
+                  artifactId: data.artifactId,
+                  messageId: data.messageId,
+                  actionId: restartActionId,
+                  action: { type: 'start', content: 'npm run dev' } as any,
+                });
+                await this._runAction({
+                  artifactId: data.artifactId,
+                  messageId: data.messageId,
+                  actionId: restartActionId,
+                  action: { type: 'start', content: 'npm run dev' } as any,
+                });
+              }
+            } catch {}
+          }, waitMs);
+        } catch {}
       }
     }
   }
