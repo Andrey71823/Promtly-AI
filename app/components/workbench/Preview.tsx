@@ -108,6 +108,25 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
     setDisplayPath('/');
   }, [activePreview]);
 
+  // Auto-reload iframe when preview ready state toggles (e.g., after file edits or restarts)
+  useEffect(() => {
+    if (!activePreview || !iframeRef.current) {
+      return;
+    }
+
+    // When preview flips back to ready, force iframe reload to show latest results
+    if (activePreview.ready) {
+      try {
+        previewLoadingManager.setLoadingState('starting');
+      } catch {}
+
+      // Reload keeping current path
+      const currentSrc = iframeRef.current.src;
+      iframeRef.current.src = currentSrc;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePreview?.ready]);
+
   // Monitor iframe URL changes and set loading state
   useEffect(() => {
     if (iframeUrl && activePreview) {

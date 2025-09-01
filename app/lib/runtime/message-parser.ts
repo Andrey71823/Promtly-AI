@@ -88,6 +88,13 @@ export class StreamingMessageParser {
   constructor(private _options: StreamingMessageParserOptions = {}) {}
 
   parse(messageId: string, input: string) {
+    // Strip any pre-existing guidance blocks from LLM output; we'll append a single
+    // guidance block ourselves only after a successful <boltAction type="start"> completes
+    try {
+      const guidanceBlockRegex = /⏳[\s\S]*?Results are visible in the Preview tab right now!/g;
+      input = input.replace(guidanceBlockRegex, '');
+    } catch {}
+
     let state = this.#messages.get(messageId);
 
     if (!state) {

@@ -667,16 +667,29 @@ export class WorkbenchStore {
       if (!isStreaming) {
         await artifact.runner.runAction(data);
         this.resetAllFileModifications();
-        // Do not auto-switch here; switching happens only when start action runs
+        // After file writes, ask preview store to soft refresh so user sees new content without manual reload
+        try {
+          const previews = this.previews.get();
+          previews.forEach((p) => {
+            const previewId = this.#previewsStore.getPreviewId(p.baseUrl);
+            if (previewId) {
+              this.#previewsStore.refreshPreview(previewId);
+            }
+          });
+        } catch {}
       }
     } else {
       await artifact.runner.runAction(data);
 
-      // If a dev server is being started, switch to preview automatically
+      // If a dev server is being started, switch to preview automatically and mark loading
       if (data.action.type === 'start') {
         if (this.currentView.value !== 'preview') {
           this.currentView.set('preview');
         }
+        try {
+          const { previewLoadingManager } = await import('~/lib/stores/previewLoading');
+          previewLoadingManager.setLoadingState('starting');
+        } catch {}
       }
     }
   }
