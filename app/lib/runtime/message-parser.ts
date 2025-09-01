@@ -225,21 +225,27 @@ export class StreamingMessageParser {
             if ('type' in currentAction && currentAction.type === 'file') {
               let content = input.slice(i);
 
-              if (!currentAction.filePath.endsWith('.md')) {
-                content = cleanoutMarkdownSyntax(content);
-                content = cleanEscapedTags(content);
-              }
+              try {
+                const filePath = (currentAction as any).filePath as string | undefined;
 
-              this._options.callbacks?.onActionStream?.({
-                artifactId: currentArtifact.id,
-                messageId,
-                actionId: String(state.actionId - 1),
-                action: {
-                  ...(currentAction as FileAction),
-                  content,
-                  filePath: currentAction.filePath,
-                },
-              });
+                if (filePath && !filePath.endsWith('.md')) {
+                  content = cleanoutMarkdownSyntax(content);
+                  content = cleanEscapedTags(content);
+                }
+
+                this._options.callbacks?.onActionStream?.({
+                  artifactId: currentArtifact.id,
+                  messageId,
+                  actionId: String(state.actionId - 1),
+                  action: {
+                    ...(currentAction as FileAction),
+                    content,
+                    filePath: filePath || '',
+                  },
+                });
+              } catch {
+                // Defensive: never crash the UI when streaming malformed file action
+              }
             }
 
             break;
