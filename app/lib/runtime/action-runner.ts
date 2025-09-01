@@ -320,14 +320,34 @@ export class ActionRunner {
     }
 
     const webcontainer = await this.#webcontainer;
-    const relativePath = nodePath.relative(webcontainer.workdir, action.filePath);
+    let filePath = action.filePath;
+
+    // Fix file paths that might have incorrect prefixes
+    if (filePath.startsWith('../')) {
+      while (filePath.startsWith('../')) {
+        filePath = filePath.replace(/^\.\.\//, '');
+      }
+    }
+    if (filePath.startsWith('/')) {
+      filePath = filePath.substring(1);
+    }
+
+    console.log(`ActionRunner: webcontainer.workdir = ${webcontainer.workdir}, original action.filePath = ${action.filePath}, fixed filePath = ${filePath}`);
+    const relativePath = nodePath.relative(webcontainer.workdir, filePath);
+    console.log(`ActionRunner: relativePath = ${relativePath}`);
 
     let folder = nodePath.dirname(relativePath);
 
     // remove trailing slashes
     folder = folder.replace(/\/+$/g, '');
 
-    if (folder !== '.') {
+    // Ensure folder path is valid and doesn't go outside project root
+    if (folder.includes('..') || folder.startsWith('/')) {
+      console.warn(`ActionRunner: Invalid folder path: ${folder}, skipping folder creation`);
+      folder = '.';
+    }
+
+    if (folder !== '.' && folder !== '') {
       try {
         await webcontainer.fs.mkdir(folder, { recursive: true });
         logger.debug('Created folder', folder);
@@ -336,11 +356,26 @@ export class ActionRunner {
       }
     }
 
+    // Ensure the final path is valid
+    let finalPath = relativePath;
+    if (finalPath.includes('..') || finalPath.startsWith('/')) {
+      console.warn(`ActionRunner: Invalid file path: ${finalPath}, using fallback`);
+      finalPath = filePath; // Use the fixed filePath as fallback
+    }
+
     try {
-      await webcontainer.fs.writeFile(relativePath, action.content);
-      logger.debug(`File written ${relativePath}`);
+      await webcontainer.fs.writeFile(finalPath, action.content);
+      logger.debug(`File written ${finalPath}`);
     } catch (error) {
       logger.error('Failed to write file\n\n', error);
+      // Try with original filePath as last resort
+      try {
+        console.log('Trying with original path as fallback...');
+        await webcontainer.fs.writeFile(action.filePath, action.content);
+        logger.debug(`File written (fallback) ${action.filePath}`);
+      } catch (fallbackError) {
+        logger.error('Failed to write file with fallback\n\n', fallbackError);
+      }
     }
   }
 
