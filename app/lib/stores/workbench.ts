@@ -529,20 +529,31 @@ export class WorkbenchStore {
       const { messageId, id: artifactId } = data;
 
       if (this.#autoStartedMessages.has(messageId)) {
+        console.log('[Workbench] Already auto-started for this message, skipping');
         return;
       }
 
-      // If a preview already exists, skip
+      // Check if there's already a running server to avoid conflicts
       const previews = this.previews.get();
-      const hasAnyPreview = Array.isArray(previews) && previews.length > 0;
-
-      if (hasAnyPreview) {
+      const hasActivePreview = Array.isArray(previews) && previews.some(p => p.ready);
+      if (hasActivePreview) {
+        console.log('[Workbench] Preview already active, skipping auto-start');
         return;
       }
 
+      // Check if there are any pending/running start actions
       const artifact = this.#getArtifact(messageId);
+      if (artifact) {
+        const actions = artifact.runner.actions.get();
+        const hasRunningStart = Object.values(actions).some((a: any) => a?.type === 'start' && a?.status === 'running');
+        if (hasRunningStart) {
+          console.log('[Workbench] Start action already running, skipping auto-start');
+          return;
+        }
+      }
 
       if (!artifact) {
+        console.log('[Workbench] No artifact found for message, skipping auto-start');
         return;
       }
 
@@ -577,6 +588,31 @@ export class WorkbenchStore {
         actionId: shellActionId,
         action: { type: 'shell', content: 'npm install' } as any,
       });
+
+      // Wait a bit for npm install to complete and files to be fully written
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Check if npm install was successful by checking if node_modules exists
+      try {
+        const checkModulesActionId = `check-modules-${Date.now()}`;
+        await this._addAction({
+          artifactId,
+          messageId,
+          actionId: checkModulesActionId,
+          action: { type: 'shell', content: 'ls node_modules | head -5' } as any,
+        });
+        await this._runAction({
+          artifactId,
+          messageId,
+          actionId: checkModulesActionId,
+          action: { type: 'shell', content: 'ls node_modules | head -5' } as any,
+        });
+      } catch (error) {
+        console.warn('[Workbench] Could not verify node_modules, but continuing with start');
+      }
+
+      // Small delay before starting dev server
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Queue and run npm run dev
       await this._addAction({

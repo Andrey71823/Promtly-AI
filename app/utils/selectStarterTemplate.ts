@@ -214,9 +214,14 @@ ${filesToImport.files
         fixedPath = fixedPath.substring(1);
       }
       // Remove any ../ prefix that might cause issues
-      if (fixedPath.startsWith('../')) {
+      while (fixedPath.startsWith('../')) {
         fixedPath = fixedPath.replace(/^\.\.\//, '');
       }
+      // Ensure no double slashes or incorrect paths
+      fixedPath = fixedPath.replace(/\/+/g, '/').replace(/^\//, '');
+
+      console.log(`Template file: ${file.path} -> ${fixedPath}`);
+
       return `<boltAction type="file" filePath="${fixedPath}">
 ${file.content}
 </boltAction>`;
