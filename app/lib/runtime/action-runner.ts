@@ -340,14 +340,23 @@ export class ActionRunner {
 
     console.log(`ActionRunner: webcontainer.workdir = ${webcontainer.workdir}, original action.filePath = ${action.filePath}, fixed filePath = ${filePath}`);
 
-    // Use the fixed filePath directly if it's relative and clean
-    // Fallback to nodePath.relative if needed
+    // For WebContainer, we need to ensure paths are relative to workdir
+    // WebContainer.workdir is typically '/project' or similar
     let relativePath = filePath;
+
+    // If filePath is absolute, make it relative to webcontainer.workdir
     if (filePath.startsWith('/')) {
-      // If filePath is still absolute, use relative calculation
       relativePath = nodePath.relative(webcontainer.workdir, filePath);
     }
-    console.log(`ActionRunner: relativePath = ${relativePath}`);
+
+    // If the result contains '..', it means the path is outside workdir, which is wrong
+    // In this case, use the filePath directly (it should be relative)
+    if (relativePath.includes('..')) {
+      console.warn(`ActionRunner: relativePath contains '..', using filePath directly: ${filePath}`);
+      relativePath = filePath;
+    }
+
+    console.log(`ActionRunner: final relativePath = ${relativePath}`);
 
     let folder = nodePath.dirname(relativePath);
 
@@ -355,9 +364,9 @@ export class ActionRunner {
     folder = folder.replace(/\/+$/g, '');
 
     // Ensure folder path is valid and doesn't go outside project root
-    if (folder.includes('..') || folder.startsWith('/')) {
-      console.warn(`ActionRunner: Invalid folder path: ${folder}, skipping folder creation`);
-      folder = '.';
+    if (folder.startsWith('/')) {
+      console.warn(`ActionRunner: Absolute folder path: ${folder}, making relative`);
+      folder = folder.substring(1);
     }
 
     if (folder !== '.' && folder !== '') {
@@ -371,9 +380,9 @@ export class ActionRunner {
 
     // Ensure the final path is valid
     let finalPath = relativePath;
-    if (finalPath.includes('..') || finalPath.startsWith('/')) {
-      console.warn(`ActionRunner: Invalid file path: ${finalPath}, using fallback`);
-      finalPath = filePath; // Use the fixed filePath as fallback
+    if (finalPath.startsWith('/')) {
+      console.warn(`ActionRunner: Absolute path detected: ${finalPath}, making relative`);
+      finalPath = finalPath.substring(1);
     }
 
     try {
