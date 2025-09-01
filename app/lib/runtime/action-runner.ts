@@ -253,16 +253,8 @@ export class ActionRunner {
       unreachable('Expected shell action');
     }
 
-    // Ensure we're in the correct working directory
     const webcontainer = await this.#webcontainer;
-    if (webcontainer.workdir !== '/home/project') {
-      console.log(`Shell action: correcting workdir from ${webcontainer.workdir} to /home/project`);
-      try {
-        await webcontainer.fs.chdir('/home/project');
-      } catch (error) {
-        console.warn('Failed to change to project directory:', error);
-      }
-    }
+    console.log(`Shell action: webcontainer.workdir = ${webcontainer.workdir}`);
 
     const shell = this.#shellTerminal();
     await shell.ready();
@@ -294,16 +286,8 @@ export class ActionRunner {
       unreachable('Expected shell action');
     }
 
-    // Ensure we're in the correct working directory
     const webcontainer = await this.#webcontainer;
-    if (webcontainer.workdir !== '/home/project') {
-      console.log(`Start action: correcting workdir from ${webcontainer.workdir} to /home/project`);
-      try {
-        await webcontainer.fs.chdir('/home/project');
-      } catch (error) {
-        console.warn('Failed to change to project directory:', error);
-      }
-    }
+    console.log(`Start action: webcontainer.workdir = ${webcontainer.workdir}`);
 
     if (!this.#shellTerminal) {
       unreachable('Shell terminal not found');
@@ -355,7 +339,14 @@ export class ActionRunner {
     }
 
     console.log(`ActionRunner: webcontainer.workdir = ${webcontainer.workdir}, original action.filePath = ${action.filePath}, fixed filePath = ${filePath}`);
-    const relativePath = nodePath.relative(webcontainer.workdir, filePath);
+
+    // Use the fixed filePath directly if it's relative and clean
+    // Fallback to nodePath.relative if needed
+    let relativePath = filePath;
+    if (filePath.startsWith('/')) {
+      // If filePath is still absolute, use relative calculation
+      relativePath = nodePath.relative(webcontainer.workdir, filePath);
+    }
     console.log(`ActionRunner: relativePath = ${relativePath}`);
 
     let folder = nodePath.dirname(relativePath);
