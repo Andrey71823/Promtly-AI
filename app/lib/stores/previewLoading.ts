@@ -18,13 +18,14 @@ export const previewLoadingState = atom<PreviewLoadingInfo>({
 // Message templates for different states
 export const LOADING_MESSAGES = {
   idle: "",
-  generating: "Code ready! Please wait 1-2 minutes for the result to appear in preview",
-  building: "Building project... Please wait for the result in preview",
-  starting: "Server starting... Please wait for the result in preview", 
-  commands: "After executing commands, please wait a couple of minutes for the result to appear in preview",
-  executing: "Commands executing... Please wait for result in preview",
-  error: "Error loading preview. Please try refreshing or check the terminal for errors.",
-  ready: "Preview is ready!"
+  generating: "🎨 Generating your code... Please wait 10-30 seconds",
+  building: "📦 Installing dependencies and building project... Please wait 30-60 seconds",
+  starting: "🚀 Starting development server... Almost ready!",
+  commands: "⚙️ Executing commands... Setting everything up",
+  executing: "⚡ Processing... Please wait for your app to appear",
+  // Replace harsh error with a friendly waiting message to reduce confusion
+  error: "⏳ Please wait while commands finish in the terminal. The preview will appear automatically.",
+  ready: "✅ Your app is ready! Check the preview below."
 };
 
 export class PreviewLoadingManager {

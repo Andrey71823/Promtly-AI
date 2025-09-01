@@ -650,9 +650,7 @@ export class WorkbenchStore {
         this.setSelectedFile(fullPath);
       }
 
-      if (this.currentView.value !== 'code') {
-        this.currentView.set('code');
-      }
+      // Keep the user on their current tab during file updates to avoid tab flicker
 
       const doc = this.#editorStore.documents.get()[fullPath];
 
@@ -669,11 +667,7 @@ export class WorkbenchStore {
       if (!isStreaming) {
         await artifact.runner.runAction(data);
         this.resetAllFileModifications();
-
-        // After applying file changes, auto-switch to preview so users immediately see results
-        if (this.currentView.value !== 'preview') {
-          this.currentView.set('preview');
-        }
+        // Do not auto-switch here; switching happens only when start action runs
       }
     } else {
       await artifact.runner.runAction(data);

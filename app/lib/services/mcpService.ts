@@ -375,15 +375,40 @@ export class MCPService {
   }
 
   async processToolInvocations(messages: Message[], dataStream: DataStreamWriter): Promise<Message[]> {
+    // Validate input messages
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      logger.warn('processToolInvocations: Invalid or empty messages array');
+      return messages;
+    }
+
     const lastMessage = messages[messages.length - 1];
+
+    // Validate last message
+    if (!lastMessage || typeof lastMessage !== 'object') {
+      logger.warn('processToolInvocations: Invalid last message');
+      return messages;
+    }
+
     const parts = lastMessage.parts;
 
     if (!parts) {
       return messages;
     }
 
+    // Filter out empty text parts to prevent validation errors
+    const validParts = parts.filter((part) => {
+      if (part.type === 'text' && (!part.text || part.text.trim() === '')) {
+        logger.warn('Filtering out empty text part');
+        return false;
+      }
+      return true;
+    });
+
+    // Ensure at least one valid part remains, add default if needed
+    const finalParts = validParts.length > 0 ? validParts : [{ type: 'text' as const, text: ' ' }];
+
     const processedParts = await Promise.all(
-      parts.map(async (part) => {
+      finalParts.map(async (part) => {
         // Only process tool invocations parts
         if (part.type !== 'tool-invocation') {
           return part;
@@ -406,8 +431,13 @@ export class MCPService {
             logger.debug(`calling tool "${toolName}" with args: ${JSON.stringify(toolInvocation.args)}`);
 
             try {
+              // Filter out invalid messages before converting
+              const validMessages = messages.filter((msg) =>
+                msg && typeof msg === 'object' && msg.role && ['user', 'assistant', 'system'].includes(msg.role)
+              );
+
               result = await toolInstance.execute(toolInvocation.args, {
-                messages: convertToCoreMessages(messages),
+                messages: convertToCoreMessages(validMessages.length > 0 ? validMessages : [{ role: 'user', content: ' ' }]),
                 toolCallId,
               });
             } catch (error) {
@@ -443,8 +473,23 @@ export class MCPService {
       }),
     );
 
+    // Filter out empty parts to prevent validation errors
+    const filteredProcessedParts = processedParts.filter((part) => {
+      if (part.type === 'text' && (!part.text || part.text.trim() === '')) {
+        logger.warn('Filtering out empty text part from processed message');
+        return false;
+      }
+      return true;
+    });
+
+    // Ensure we have at least one valid part
+    if (filteredProcessedParts.length === 0) {
+      // If no valid parts, add a default text part
+      filteredProcessedParts.push({ type: 'text', text: ' ' });
+    }
+
     // Finally return the processed messages
-    return [...messages.slice(0, -1), { ...lastMessage, parts: processedParts }];
+    return [...messages.slice(0, -1), { ...lastMessage, parts: filteredProcessedParts }];
   }
 
   get tools() {

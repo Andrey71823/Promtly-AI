@@ -61,10 +61,14 @@ export async function createSummary(props: {
 
     if (!modelDetails) {
       // Fallback to first model
-      logger.warn(
-        `MODEL [${currentModel}] not found in provider [${provider.name}]. Falling back to first model. ${modelsList[0].name}`,
-      );
-      modelDetails = modelsList[0];
+      if (modelsList && modelsList.length > 0) {
+        logger.warn(
+          `MODEL [${currentModel}] not found in provider [${provider.name}]. Falling back to first model. ${modelsList[0].name}`,
+        );
+        modelDetails = modelsList[0];
+      } else {
+        throw new Error(`No models available for provider ${provider.name}`);
+      }
     }
   }
 
@@ -189,7 +193,7 @@ Please provide a summary of the chat till now including the hitorical summary of
 
   const response = resp.text;
 
-  if (onFinish) {
+  if (onFinish && resp && resp.usage) {
     onFinish(resp);
   }
 

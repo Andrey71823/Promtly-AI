@@ -693,6 +693,34 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
           />
         </div>
 
+        {/* Project Status Indicator */}
+        {activePreview && (
+          <div className="flex items-center gap-2 ml-auto mr-4">
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+              loadingInfo.state === 'ready' ? 'bg-green-500/10 text-green-400' :
+              loadingInfo.state === 'error' ? 'bg-red-500/10 text-red-400' :
+              loadingInfo.state === 'idle' ? 'bg-gray-500/10 text-gray-400' :
+              'bg-blue-500/10 text-blue-400'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${
+                loadingInfo.state === 'ready' ? 'bg-green-400' :
+                loadingInfo.state === 'error' ? 'bg-red-400' :
+                loadingInfo.state === 'idle' ? 'bg-gray-400' :
+                'bg-blue-400 animate-pulse'
+              }`} />
+              <span>
+                {loadingInfo.state === 'ready' ? '✅ Ready' :
+                 loadingInfo.state === 'error' ? '❌ Error' :
+                 loadingInfo.state === 'idle' ? '⏸️ Idle' :
+                 loadingInfo.state === 'generating' ? '🎨 Generating' :
+                 loadingInfo.state === 'building' ? '📦 Building' :
+                 loadingInfo.state === 'starting' ? '🚀 Starting' :
+                 '⚡ Processing'}
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="flex-grow flex items-center gap-1 bg-bolt-elements-preview-addressBar-background border border-bolt-elements-borderColor text-bolt-elements-preview-addressBar-text rounded-full px-1 py-1 text-sm hover:bg-bolt-elements-preview-addressBar-backgroundHover hover:focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within:bg-bolt-elements-preview-addressBar-backgroundActive focus-within-border-bolt-elements-borderColorActive focus-within:text-bolt-elements-preview-addressBar-textActive">
           <PortDropdown
             activePreviewIndex={activePreviewIndex}

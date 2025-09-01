@@ -27,11 +27,18 @@ export interface StreamingOptions extends Omit<Parameters<typeof _streamText>[0]
 const logger = createScopedLogger('stream-text');
 
 function sanitizeText(text: string): string {
+  if (!text || typeof text !== 'string') {
+    return ' ';
+  }
+
   let sanitized = text.replace(/<div class=\\"__boltThought__\\">.*?<\/div>/s, '');
   sanitized = sanitized.replace(/<think>.*?<\/think>/s, '');
   sanitized = sanitized.replace(/<boltAction type="file" filePath="package-lock\.json">[\s\S]*?<\/boltAction>/g, '');
 
-  return sanitized.trim();
+  const trimmed = sanitized.trim();
+
+  // Ensure we never return empty content
+  return trimmed || ' ';
 }
 
 export async function streamText(props: {
@@ -80,7 +87,7 @@ export async function streamText(props: {
     // Sanitize all text parts in parts array, if present
     if (Array.isArray(message.parts)) {
       newMessage.parts = message.parts.map((part) =>
-        part.type === 'text' ? { ...part, text: sanitizeText(part.text) } : part,
+        part.type === 'text' ? { ...part, text: sanitizeText(part.text || ' ') } : part,
       );
     }
 
@@ -126,7 +133,7 @@ export async function streamText(props: {
     return Math.min(base, 8000);
   })();
   logger.info(
-    `Max tokens for model ${modelDetails.name} is ${dynamicMaxTokens} based on ${modelDetails.maxTokenAllowed} or ${MAX_TOKENS}`,
+    `Max tokens for model ${modelDetails?.name || 'unknown'} is ${dynamicMaxTokens} based on ${modelDetails?.maxTokenAllowed || 'unknown'} or ${MAX_TOKENS}`,
   );
 
   let systemPrompt =
@@ -199,9 +206,40 @@ export async function streamText(props: {
     console.log('No locked files found from any source for prompt.');
   }
 
-  logger.info(`Sending llm call to ${provider.name} with model ${modelDetails.name}`);
+  logger.info(`Sending llm call to ${provider.name} with model ${modelDetails?.name || 'unknown'}`);
 
-  // console.log(systemPrompt, processedMessages);
+  // Filter out messages with empty content and invalid objects to prevent validation errors
+  const validMessages = processedMessages.filter((message) => {
+    // Filter out null/undefined messages
+    if (!message || typeof message !== 'object') {
+      logger.warn(`Filtering out invalid message object: ${message}`);
+      return false;
+    }
+
+    // Filter out messages without required properties
+    if (!message.role || !['user', 'assistant', 'system'].includes(message.role)) {
+      logger.warn(`Filtering out message with invalid role: ${message.role}`);
+      return false;
+    }
+
+    // Filter out assistant messages with empty content
+    if (message.role === 'assistant' && (!message.content || message.content.trim() === '')) {
+      logger.warn(`Filtering out assistant message with empty content at index ${processedMessages.indexOf(message)}`);
+      return false;
+    }
+
+    return true;
+  });
+
+  if (validMessages.length === 0) {
+    throw new Error('No valid messages found after filtering');
+  }
+
+  // console.log(systemPrompt, validMessages);
+
+  if (!modelDetails) {
+    throw new Error('No valid model found for streaming');
+  }
 
   return await _streamText({
     model: provider.getModelInstance({
@@ -212,7 +250,7 @@ export async function streamText(props: {
     }),
     system: chatMode === 'build' ? systemPrompt : discussPrompt(),
     maxTokens: dynamicMaxTokens,
-    messages: convertToCoreMessages(processedMessages as any),
+    messages: convertToCoreMessages(validMessages as any),
     ...options,
   });
 }

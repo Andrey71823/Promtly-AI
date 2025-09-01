@@ -462,7 +462,18 @@ export const ChatImpl = memo(
           }
 
           // Create element info like in old working code, but with messageId
-          const elementInfo = `<div class="__boltSelectedElement__" data-message-id="${messageId}" data-element='${JSON.stringify(safeSelectedElement)}'>${JSON.stringify(safeSelectedElement.displayText)}</div>`;
+          // IMPORTANT: Escape JSON for safe embedding into HTML attribute
+          const elementJson = JSON.stringify(safeSelectedElement);
+          const displayTextJson = JSON.stringify(safeSelectedElement.displayText ?? '');
+          const escapeAttr = (value: string) =>
+            value
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#39;');
+
+          const elementInfo = `<div class="__boltSelectedElement__" data-message-id="${messageId}" dataMessageId="${messageId}" data-element='${elementJson.replace(/'/g, '&#39;')}'>${escapeAttr(displayTextJson)}</div>`;
           console.log('Element info to be added:', elementInfo.substring(0, 200) + '...');
           console.log('Generated messageId for element:', messageId);
           console.log('Full element info:', elementInfo);
@@ -545,20 +556,7 @@ export const ChatImpl = memo(
         }
 
         // If autoSelectTemplate is disabled or template selection failed, proceed with normal message
-        // But always include current project files context for AI to generate code
         let userMessageText = `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${finalMessageContent}`;
-
-        // Add current project files context if available
-        if (Object.keys(files).length > 0) {
-          const projectFilesArtifact = filesToArtifacts(files, `project-context-${Date.now()}`);
-          console.log('Adding project context:', projectFilesArtifact.substring(0, 200) + '...');
-          userMessageText += `\n\n${projectFilesArtifact}`;
-
-          // Add specific instruction about correct imports
-          userMessageText += `\n\nCRITICAL: Use correct Lucide React imports:`;
-          userMessageText += `\nimport { GitHub, Rocket, Heart } from 'lucide-react';`;
-          userMessageText += `\n// NOT: import { Github, Rocket, Heart } from 'lucide-react';`;
-        }
 
         const attachments = uploadedFiles.length > 0 ? await filesToAttachments(uploadedFiles) : undefined;
 

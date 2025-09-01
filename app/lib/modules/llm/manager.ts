@@ -3,6 +3,26 @@ import { BaseProvider } from './base-provider';
 import type { ModelInfo, ProviderInfo } from './types';
 import * as providers from './registry';
 import { createScopedLogger } from '~/utils/logger';
+import {
+  AnthropicProvider,
+  CohereProvider,
+  DeepseekProvider,
+  GoogleProvider,
+  GroqProvider,
+  HuggingFaceProvider,
+  HyperbolicProvider,
+  MistralProvider,
+  OllamaProvider,
+  OpenAIProvider,
+  OpenRouterProvider,
+  OpenAILikeProvider,
+  PerplexityProvider,
+  XAIProvider,
+  TogetherProvider,
+  LMStudioProvider,
+  AmazonBedrockProvider,
+  GithubProvider,
+} from './registry';
 
 const logger = createScopedLogger('LLMManager');
 export class LLMManager {
@@ -12,7 +32,7 @@ export class LLMManager {
   private readonly _env: any = {};
 
   private constructor(_env: Record<string, string>) {
-    this._registerProvidersFromDirectory();
+    this._registerProvidersManually();
     this._env = _env;
   }
 
@@ -27,23 +47,36 @@ export class LLMManager {
     return this._env;
   }
 
-  private async _registerProvidersFromDirectory() {
+  private _registerProvidersManually() {
     try {
-      /*
-       * Dynamically import all files from the providers directory
-       * const providerModules = import.meta.glob('./providers/*.ts', { eager: true });
-       */
+      // Manually register all providers
+      const providers = [
+        AnthropicProvider,
+        CohereProvider,
+        DeepseekProvider,
+        GoogleProvider,
+        GroqProvider,
+        HuggingFaceProvider,
+        HyperbolicProvider,
+        MistralProvider,
+        OllamaProvider,
+        OpenAIProvider,
+        OpenRouterProvider,
+        OpenAILikeProvider,
+        PerplexityProvider,
+        XAIProvider,
+        TogetherProvider,
+        LMStudioProvider,
+        AmazonBedrockProvider,
+        GithubProvider,
+      ];
 
-      // Look for exported classes that extend BaseProvider
-      for (const exportedItem of Object.values(providers)) {
-        if (typeof exportedItem === 'function' && exportedItem.prototype instanceof BaseProvider) {
-          const provider = new exportedItem();
-
-          try {
-            this.registerProvider(provider);
-          } catch (error: any) {
-            logger.warn('Failed To Register Provider: ', provider.name, 'error:', error.message);
-          }
+      for (const ProviderClass of providers) {
+        try {
+          const provider = new ProviderClass();
+          this.registerProvider(provider);
+        } catch (error: any) {
+          logger.warn('Failed To Register Provider: ', ProviderClass.name, 'error:', error.message);
         }
       }
     } catch (error) {

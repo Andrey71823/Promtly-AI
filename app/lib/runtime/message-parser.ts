@@ -12,6 +12,15 @@ const BOLT_QUICK_ACTIONS_CLOSE = '</bolt-quick-actions>';
 
 const logger = createScopedLogger('MessageParser');
 
+const GUIDANCE_TEXT =
+  '\n\n' +
+  '⏳ Please wait 2-3 minutes for the project to load completely!\n' +
+  '📺 Preview might show white/black screen while rendering - this is normal!\n' +
+  '🔄 I\'ve switched to the Preview tab - changes appear immediately!\n' +
+  '📱 If preview doesn\'t appear, click the "Preview" tab at the top.\n' +
+  '💡 If the project doesn\'t start automatically: Go to Terminal → Type "npm install" → After completion type "npm run dev" → Click "Preview" tab\n' +
+  '✨ Results are visible in the Preview tab right now!';
+
 export interface ArtifactCallbackData extends BoltArtifactData {
   messageId: string;
 }
@@ -52,6 +61,9 @@ interface MessageState {
   currentArtifact?: BoltArtifactData;
   currentAction: BoltActionData;
   actionId: number;
+  autoStartInjected?: boolean;
+  actionSeen?: boolean;
+  guidanceInjected?: boolean;
 }
 
 function cleanoutMarkdownSyntax(content: string) {
@@ -93,6 +105,25 @@ export class StreamingMessageParser {
     let output = '';
     let i = state.position;
     let earlyBreak = false;
+
+    // Plain-text auto-start fallback (inject once per message)
+    // Always ensure a start block is present once per message when user asks to create/build/make or when no start found
+    if (!state.insideArtifact && !state.autoStartInjected) {
+      const userWantsBuild = /\b(create|build|make|создай|сделай|построй)\b/i.test(input);
+      const hasStart = /<boltAction[^>]*type="start"/i.test(input);
+      const hasShellStart = /npm\s+install/i.test(input) && /npm\s+run\s+dev/i.test(input);
+
+      if ((userWantsBuild && !hasStart) || (!hasStart && hasShellStart && !/<boltAction[^>]*type="(shell|start)"/i.test(input))) {
+        const fallback =
+          '<boltArtifact title="Project Setup" id="auto-setup">' +
+          '<boltAction type="shell">npm install</boltAction>' +
+          '<boltAction type="start">npm run dev</boltAction>' +
+          '</boltArtifact>';
+        // Inject only the artifact; the guidance text will be appended once after the start action finishes
+        input = input + '\n' + fallback;
+        state.autoStartInjected = true;
+      }
+    }
 
     while (i < input.length) {
       if (input.startsWith(BOLT_QUICK_ACTIONS_OPEN, i)) {
@@ -173,6 +204,14 @@ export class StreamingMessageParser {
 
             state.insideAction = false;
             state.currentAction = { content: '' };
+
+            // If we just finished a start action, inject guidance text to assistant output once
+            try {
+              if (!state.guidanceInjected && 'type' in currentAction && currentAction.type === 'start') {
+                output += GUIDANCE_TEXT;
+                state.guidanceInjected = true;
+              }
+            } catch {}
 
             i = closeIndex + ARTIFACT_ACTION_TAG_CLOSE.length;
           } else {
@@ -310,6 +349,22 @@ export class StreamingMessageParser {
     }
 
     state.position = i;
+
+    // Remove fenced code blocks outside of artifacts to prevent raw code flooding the chat UI
+    // This strips Markdown triple-backtick sections that may appear in assistant prose
+    output = output.replace(/```[\s\S]*?```/g, '');
+
+    // Ensure only one guidance block exists in the final output
+    if (output.includes('Please wait 2-3 minutes for the project to load completely!')) {
+      const escaped = GUIDANCE_TEXT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\n/g, '(?:\\n|\r|\r\\n)');
+      const regex = new RegExp(`${escaped}`, 'g');
+      const matches = output.match(regex) || [];
+
+      if (matches.length > 1) {
+        output = output.replace(regex, '');
+        output += GUIDANCE_TEXT;
+      }
+    }
 
     return output;
   }

@@ -75,20 +75,47 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
   let progressCounter: number = 1;
 
   try {
+    // Validate messages array
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      throw new Error('Invalid messages array');
+    }
+
+    // Validate each message has required properties
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      if (!message || typeof message !== 'object') {
+        throw new Error(`Invalid message at index ${i}`);
+      }
+      if (!message.role || !['user', 'assistant', 'system'].includes(message.role)) {
+        throw new Error(`Invalid message role at index ${i}: ${message.role}`);
+      }
+      if (message.role !== 'system' && (!message.content || message.content.trim() === '')) {
+        logger.warn(`Message at index ${i} has empty content, adding fallback`);
+        message.content = ' '; // Add fallback content
+      }
+    }
+
     const mcpService = MCPService.getInstance();
-    const totalMessageContent = messages.reduce((acc, message) => acc + message.content, '');
+    const totalMessageContent = messages.reduce((acc, message) => acc + (message.content || ''), '');
     logger.debug(`Total message length: ${totalMessageContent.split(' ').length}, words`);
 
     let lastChunk: string | undefined = undefined;
 
     const dataStream = createDataStream({
       async execute(dataStream) {
-        const filePaths = getFilePaths(files || {});
+        // Validate files object
+        const validatedFiles = files && typeof files === 'object' ? files : {};
+        const filePaths = getFilePaths(validatedFiles);
         let filteredFiles: FileMap | undefined = undefined;
         let summary: string | undefined = undefined;
         let messageSliceId = 0;
 
         const processedMessages = await mcpService.processToolInvocations(messages, dataStream);
+
+        // Validate processed messages
+        if (!processedMessages || !Array.isArray(processedMessages) || processedMessages.length === 0) {
+          throw new Error('No valid processed messages returned from MCP service');
+        }
 
         if (processedMessages.length > 3) {
           messageSliceId = processedMessages.length - 3;
@@ -184,9 +211,11 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
             logger.debug(`files in context : ${JSON.stringify(Object.keys(filteredFiles))}`);
           }
 
+          // Only emit codeContext if we have files; guard against undefined
+          const ctxFiles: string[] = filteredFiles ? Object.keys(filteredFiles as Record<string, unknown>) : [];
           dataStream.writeMessageAnnotation({
             type: 'codeContext',
-            files: Object.keys(filteredFiles).map((key) => {
+            files: ctxFiles.map((key) => {
               let path = key;
 
               if (path.startsWith(WORK_DIR)) {

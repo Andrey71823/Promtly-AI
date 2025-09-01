@@ -6,19 +6,11 @@ export interface PreviewLoadingOverlayProps {
   type: 'idle' | 'generating' | 'building' | 'starting' | 'ready' | 'error';
 }
 
-const LOADING_MESSAGES = {
-  idle: "",
-  generating: "Code ready! Please wait 1-2 minutes for the result to appear in preview",
-  building: "Building project... Please wait for the result in preview", 
-  starting: "Server starting... Please wait for the result in preview",
-  commands: "After executing commands, please wait a couple of minutes for the result to appear in preview",
-  executing: "Commands executing... Please wait for result in preview",
-  ready: "Preview is ready!",
-  error: "Error loading preview. Please try refreshing or check the terminal for errors."
-};
+// Import updated messages from the store
+import { LOADING_MESSAGES } from '~/lib/stores/previewLoading';
 
 const LoadingSpinner = () => (
-  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bolt-elements-textPrimary"></div>
+  <div className="animate-spin rounded-full h-12 w-12 border-b-3 border-bolt-elements-textPrimary"></div>
 );
 
 const ErrorIcon = () => (
@@ -51,13 +43,36 @@ export const PreviewLoadingOverlay = memo(({ isVisible, message, type }: Preview
         </div>
         
         {/* Message */}
-        <div className="space-y-2">
-          <p className="text-lg font-medium text-bolt-elements-textPrimary">
-            {type === 'error' ? 'Preview Error' : 'Loading Preview'}
-          </p>
-          <p className="text-sm text-bolt-elements-textSecondary leading-relaxed">
-            {displayMessage}
-          </p>
+        <div className="space-y-3">
+          <div className="text-center">
+            <p className="text-xl font-semibold text-bolt-elements-textPrimary mb-1">
+              {type === 'error' ? '⏳ Please wait' :
+               type === 'ready' ? '✅ Ready!' :
+               '⏳ Loading Your App'}
+            </p>
+            <p className="text-sm text-bolt-elements-textSecondary leading-relaxed max-w-sm">
+              {displayMessage}
+            </p>
+          </div>
+
+          {/* Project Control Options */}
+          {(type === 'building' || type === 'starting') && (
+            <div className="bg-bolt-elements-background-depth-2 rounded-lg p-3 mt-4">
+              <p className="text-xs font-medium text-bolt-elements-textPrimary mb-2">
+                💡 Project Controls:
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-1 text-bolt-elements-textSecondary">
+                  <span>🔄</span>
+                  <span>Auto-restart enabled</span>
+                </div>
+                <div className="flex items-center gap-1 text-bolt-elements-textSecondary">
+                  <span>🚀</span>
+                  <span>Dev server running</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Progress indicator for non-error states */}
@@ -84,7 +99,7 @@ export const PreviewLoadingOverlay = memo(({ isVisible, message, type }: Preview
         {/* Additional info for error state */}
         {type === 'error' && (
           <div className="text-xs text-bolt-elements-textTertiary">
-            <p>Try refreshing the preview or check the terminal for error details.</p>
+            <p>Waiting for the terminal to finish running commands. This is normal.</p>
           </div>
         )}
       </div>

@@ -53,11 +53,12 @@ Response:
 </example>
 
 Instructions:
-1. For trivial tasks and simple scripts, always recommend the blank template
-2. For more complex projects, recommend templates from the provided list
-3. Follow the exact XML format
-4. Consider both technical requirements and tags
-5. If no perfect match exists, recommend the closest option
+1. For simple components and UI elements (buttons, forms, cards), recommend React/Vite templates for auto-start
+2. For trivial tasks and simple scripts, recommend the blank template
+3. For more complex projects, recommend templates from the provided list
+4. Follow the exact XML format
+5. Consider both technical requirements and tags
+6. If no perfect match exists, recommend the closest option
 
 Important: Provide only the selection tags in your response, no additional text.
 MOST IMPORTANT: YOU DONT HAVE TIME TO THINK JUST START RESPONDING BASED ON HUNCH 
@@ -239,13 +240,19 @@ If you need to make changes to functionality, create new files instead of modify
 
   userMessage += `
 ---
-template import is done, and you can now use the imported files,
-edit only the files that need to be changed, and you can create new files as needed.
-NO NOT EDIT/WRITE ANY FILES THAT ALREADY EXIST IN THE PROJECT AND DOES NOT NEED TO BE MODIFIED
+✅ Template import is done! You can now use the imported files.
+📝 Edit only the files that need to be changed, and create new files as needed.
+🚫 DO NOT EDIT/WRITE ANY FILES THAT ALREADY EXIST IN THE PROJECT AND DOES NOT NEED TO BE MODIFIED
 ---
-Now that the Template is imported please continue with my original request
 
-IMPORTANT: Dont Forget to install the dependencies before running the app by using \`npm install && npm run dev\`
+🎯 Now that the Template is imported, please continue with my original request.
+
+🚀 **PROJECT READY!** Starting development server automatically...
+
+<boltArtifact title="Project Setup" id="setup">
+  <boltAction type="shell">npm install</boltAction>
+  <boltAction type="start">npm run dev</boltAction>
+</boltArtifact>
 `;
 
   return {
