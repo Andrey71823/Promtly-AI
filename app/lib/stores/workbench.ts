@@ -575,6 +575,21 @@ export class WorkbenchStore {
       const shellActionId = `auto-shell-${Date.now()}`;
       const startActionId = `auto-start-${Date.now()}`;
 
+      // First, ensure we're in the correct directory and package.json exists
+      const checkFilesActionId = `check-files-${Date.now()}`;
+      await this._addAction({
+        artifactId,
+        messageId,
+        actionId: checkFilesActionId,
+        action: { type: 'shell', content: 'pwd && ls -la && test -f package.json && echo "package.json found" || echo "package.json not found"' } as any,
+      });
+      await this._runAction({
+        artifactId,
+        messageId,
+        actionId: checkFilesActionId,
+        action: { type: 'shell', content: 'pwd && ls -la && test -f package.json && echo "package.json found" || echo "package.json not found"' } as any,
+      });
+
       // Queue and run npm install
       await this._addAction({
         artifactId,
@@ -589,8 +604,8 @@ export class WorkbenchStore {
         action: { type: 'shell', content: 'npm install' } as any,
       });
 
-      // Wait a bit for npm install to complete and files to be fully written
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait longer for npm install to complete and files to be fully written
+      await new Promise(resolve => setTimeout(resolve, 5000));
 
       // Check if npm install was successful by checking if node_modules exists
       try {
