@@ -374,6 +374,12 @@ export class StreamingMessageParser {
       const matches = output.match(regex) || [];
 
       if (matches.length > 1) {
+        // Replace all occurrences with empty string first
+        output = output.replace(regex, '');
+        // Add back only once at the end
+        output += GUIDANCE_TEXT;
+      } else if (matches.length === 1) {
+        // If there's already one occurrence, make sure it's at the end
         output = output.replace(regex, '');
         output += GUIDANCE_TEXT;
       }

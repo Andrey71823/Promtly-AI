@@ -206,10 +206,21 @@ Promtly AI is initializing your project with the required files using the ${temp
 <boltArtifact id="imported-files" title="${title || 'Create initial files'}" type="bundled">
 ${filesToImport.files
   .map(
-    (file) =>
-      `<boltAction type="file" filePath="${file.path}">
+    (file) => {
+      // Fix file paths to be relative to project root, not absolute
+      let fixedPath = file.path;
+      // Remove leading slash if present
+      if (fixedPath.startsWith('/')) {
+        fixedPath = fixedPath.substring(1);
+      }
+      // Remove any ../ prefix that might cause issues
+      if (fixedPath.startsWith('../')) {
+        fixedPath = fixedPath.replace(/^\.\.\//, '');
+      }
+      return `<boltAction type="file" filePath="${fixedPath}">
 ${file.content}
-</boltAction>`,
+</boltAction>`;
+    },
   )
   .join('\n')}
 </boltArtifact>
