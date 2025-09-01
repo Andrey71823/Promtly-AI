@@ -373,6 +373,14 @@ export class StreamingMessageParser {
       }
     }
 
+    // If the LLM produced only start without file changes, avoid showing guidance immediately
+    try {
+      const hasStartOnly = /<boltAction[^>]*type="start"/i.test(input) && !/<boltAction[^>]*type="file"/i.test(input);
+      if (hasStartOnly) {
+        output = output.replace(GUIDANCE_TEXT, '');
+      }
+    } catch {}
+
     return output;
   }
 

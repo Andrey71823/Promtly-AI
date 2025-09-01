@@ -104,10 +104,10 @@ export const selectStarterTemplate = async (options: { message: string; model: s
   if (selectedTemplate) {
     return selectedTemplate;
   } else {
-    console.log('No template selected, using blank template');
+    console.log('No template selected by LLM, using React + Vite fallback');
 
     return {
-      template: 'blank',
+      template: 'Vite React',
       title: '',
     };
   }
@@ -133,10 +133,27 @@ const getGitHubRepoContent = async (repoName: string): Promise<{ name: string; p
 };
 
 export async function getTemplates(templateName: string, title?: string) {
-  const template = STARTER_TEMPLATES.find((t) => t.name == templateName);
+  let template = STARTER_TEMPLATES.find((t) => t.name == templateName);
 
   if (!template) {
-    return null;
+    // Robust fallback mapping for unknown names coming from the LLM
+    const normalized = (templateName || '').toLowerCase();
+    const reactViteFallback =
+      STARTER_TEMPLATES.find((t) => t.name === 'Vite React') ||
+      STARTER_TEMPLATES.find((t) => t.tags?.includes('react') && t.tags?.includes('vite')) ||
+      STARTER_TEMPLATES.find((t) => t.name.includes('Vite')) ||
+      STARTER_TEMPLATES[0];
+
+    const mappings: Record<string, string> = {
+      'blank': 'Vite React',
+      'react-basic-starter': 'Vite React',
+      'react-vite': 'Vite React',
+      'react': 'Vite React',
+      'vite-react': 'Vite React',
+    };
+
+    const mapped = mappings[normalized];
+    template = STARTER_TEMPLATES.find((t) => t.name === mapped) || reactViteFallback;
   }
 
   const githubRepo = template.githubRepo;
