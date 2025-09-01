@@ -629,18 +629,33 @@ export class WorkbenchStore {
       // Small delay before starting dev server
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Queue and run npm run dev
+      // Check if the dev script uses vite and ensure it can be found
+      const checkViteActionId = `check-vite-${Date.now()}`;
+      await this._addAction({
+        artifactId,
+        messageId,
+        actionId: checkViteActionId,
+        action: { type: 'shell', content: 'pwd && cat package.json | grep -A 5 scripts && ls -la node_modules/.bin/vite 2>/dev/null && echo "vite found" || echo "vite not found"' } as any,
+      });
+      await this._runAction({
+        artifactId,
+        messageId,
+        actionId: checkViteActionId,
+        action: { type: 'shell', content: 'pwd && cat package.json | grep -A 5 scripts && ls -la node_modules/.bin/vite 2>/dev/null && echo "vite found" || echo "vite not found"' } as any,
+      });
+
+      // Queue and run npm run dev with multiple fallbacks
       await this._addAction({
         artifactId,
         messageId,
         actionId: startActionId,
-        action: { type: 'start', content: 'npm run dev' } as any,
+        action: { type: 'start', content: 'npm run dev || npx vite --host 0.0.0.0 || ./node_modules/.bin/vite --host 0.0.0.0' } as any,
       });
       await this._runAction({
         artifactId,
         messageId,
         actionId: startActionId,
-        action: { type: 'start', content: 'npm run dev' } as any,
+        action: { type: 'start', content: 'npm run dev || npx vite --host 0.0.0.0 || ./node_modules/.bin/vite --host 0.0.0.0' } as any,
       });
 
       this.#autoStartedMessages.add(messageId);

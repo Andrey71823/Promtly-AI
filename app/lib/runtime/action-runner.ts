@@ -253,6 +253,17 @@ export class ActionRunner {
       unreachable('Expected shell action');
     }
 
+    // Ensure we're in the correct working directory
+    const webcontainer = await this.#webcontainer;
+    if (webcontainer.workdir !== '/home/project') {
+      console.log(`Shell action: correcting workdir from ${webcontainer.workdir} to /home/project`);
+      try {
+        await webcontainer.fs.chdir('/home/project');
+      } catch (error) {
+        console.warn('Failed to change to project directory:', error);
+      }
+    }
+
     const shell = this.#shellTerminal();
     await shell.ready();
 
@@ -281,6 +292,17 @@ export class ActionRunner {
   async #runStartAction(action: ActionState) {
     if (action.type !== 'start') {
       unreachable('Expected shell action');
+    }
+
+    // Ensure we're in the correct working directory
+    const webcontainer = await this.#webcontainer;
+    if (webcontainer.workdir !== '/home/project') {
+      console.log(`Start action: correcting workdir from ${webcontainer.workdir} to /home/project`);
+      try {
+        await webcontainer.fs.chdir('/home/project');
+      } catch (error) {
+        console.warn('Failed to change to project directory:', error);
+      }
     }
 
     if (!this.#shellTerminal) {
